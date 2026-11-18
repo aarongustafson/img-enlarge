@@ -60,6 +60,72 @@ async function serve(page, controls = 'auto', enhanced = true) {
 		).toBeVisible();
 }
 
+test('refresh preserves focused openers and closes viewers back to a focused replacement', async ({
+	page,
+}) => {
+	await serve(page);
+	const host = page.locator('#bicycle');
+	const trigger = host.locator('.img-enlarge-trigger');
+	await trigger.focus();
+	await host.evaluate((element) => {
+		element.querySelector('img').style.width = '2000px';
+		element.querySelector('img').style.maxInlineSize = 'none';
+		element.refresh();
+	});
+	await expect(trigger).toBeFocused();
+	await host.evaluate((element) =>
+		element.setAttribute('open-label', 'Inspect image'),
+	);
+	await expect(trigger).toBeFocused();
+	await trigger.click();
+	await expect(page.locator('dialog')).toBeVisible();
+	await host.evaluate((element) => element.refresh());
+	await expect(page.locator('dialog')).toHaveCount(0);
+	await expect(trigger).toBeFocused();
+	await page.locator('h1').evaluate((heading) => {
+		heading.tabIndex = -1;
+		heading.focus();
+	});
+	await expect(trigger).toHaveCount(0);
+});
+
+test('eligibility preview matches viewport modal geometry inside transformed scoped ancestors without moving focus', async ({
+	page,
+}) => {
+	await serve(page, 'buttons');
+	const host = page.locator('#bicycle');
+	await host.evaluate((element) => {
+		const style = document.createElement('style');
+		style.textContent =
+			'#bicycle .img-enlarge-dialog { --img-enlarge-dialog-padding: 4rem; }';
+		document.head.append(style);
+		element.style.width = '320px';
+		element.style.transform = 'translateZ(0)';
+		const image = element.querySelector('img');
+		image.style.width = '300px';
+		image.style.maxInlineSize = 'none';
+		element.removeAttribute('force');
+		document.querySelector('h1').tabIndex = -1;
+		document.querySelector('h1').focus();
+		element.refresh();
+	});
+	await expect(page.locator('h1')).toBeFocused();
+	const trigger = host.locator('.img-enlarge-trigger');
+	await expect(trigger).toBeVisible();
+	await trigger.click();
+	const image = page.locator('dialog img');
+	await expect(image).toBeVisible();
+	expect((await image.boundingBox()).width).toBeGreaterThan(300);
+	await expect(page.locator('dialog')).toHaveCSS('padding-left', '64px');
+	await page.keyboard.press('Escape');
+	await page.locator('h1').focus();
+	await host.evaluate((element) => {
+		element.style.setProperty('--img-enlarge-dialog-inline-size', '260px');
+		element.refresh();
+	});
+	await expect(trigger).toHaveCount(0);
+});
+
 for (const controls of ['auto', 'buttons']) {
 	for (const direction of ['ltr', 'rtl']) {
 		test(`${controls}, ${direction}: keeps neighboring slides outside the viewport at fractional widths`, async ({
@@ -234,6 +300,60 @@ async function responsiveFixture(page, srcset, sizes = '200px') {
 		)
 		.toBeGreaterThan(0);
 }
+
+test('reports a later responsive resource failure and retries after a successful load', async ({
+	page,
+}) => {
+	await responsiveFixture(
+		page,
+		'/responsive-400.svg 400w, /responsive-800.svg 800w',
+	);
+	await page.setViewportSize({ width: 320, height: 640 });
+	await page.route('http://enlarge.test/later-missing.svg', (route) =>
+		route.fulfill({ status: 404, body: 'Missing image' }),
+	);
+	await page.locator('#inferred').evaluate((element) => {
+		element.setAttribute('force', '');
+		element.setAttribute(
+			'srcset',
+			'/responsive-800.svg 800w, /later-missing.svg 4000w',
+		);
+		element.setAttribute('sizes', '100vw');
+		element.addEventListener('img-enlarge:error', (event) => {
+			if (event.detail.phase === 'load')
+				element.dataset.loadErrors = String(
+					Number(element.dataset.loadErrors ?? 0) + 1,
+				);
+		});
+	});
+	await page.locator('#inferred .img-enlarge-trigger').click();
+	await expect(page.getByRole('status')).toHaveText('1 of 1');
+	await expect(page.locator('dialog img')).toHaveJSProperty(
+		'currentSrc',
+		'http://enlarge.test/responsive-800.svg',
+	);
+	await page.locator('dialog img').evaluate((image) => {
+		image.srcset = '/later-missing.svg 4000w';
+	});
+	await expect(page.getByRole('status')).toContainText('could not be loaded');
+	await expect(page.locator('#inferred')).toHaveAttribute(
+		'data-load-errors',
+		'1',
+	);
+	await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+	await page.route('http://enlarge.test/later-missing.svg', (route) =>
+		route.fulfill({
+			contentType: 'image/svg+xml',
+			body: files.get('/demo/mountains-large.svg'),
+		}),
+	);
+	await page.getByRole('button', { name: 'Try again' }).focus();
+	await page.keyboard.press('Enter');
+	await expect(page.getByRole('status')).toHaveText('1 of 1');
+	await expect(
+		page.getByRole('button', { name: 'Close', exact: true }),
+	).toBeFocused();
+});
 
 test('uses an image link ahead of an exhausted srcset without preloading or changing navigation', async ({
 	page,
@@ -974,13 +1094,10 @@ test('does not request a separate component stylesheet', async ({ page }) => {
 			stylesheets.push(new URL(request.url()).pathname);
 	});
 	await serve(page);
-	expect(stylesheets.sort()).toEqual(
-		[
-			'/demo/styles.css',
-			'/demo/demo-shell.css',
-			'/npm/microlighter@2.2.0/dist/themes/github.css',
-		].sort(),
-	);
+	expect(stylesheets.sort()).toEqual([
+		'/demo/demo-shell.css',
+		'/demo/styles.css',
+	]);
 });
 
 test('carries styles without an author stylesheet link and positions icon controls over the image and dialog', async ({
@@ -1071,6 +1188,9 @@ test('suppresses equal-size enlargement, responds to image/container and viewpor
 	});
 	await page.keyboard.press('Escape');
 	await element.evaluate((node, size) => {
+		const heading = document.querySelector('h1');
+		heading.tabIndex = -1;
+		heading.focus();
 		node.querySelector('img').style.width = `${size.width}px`;
 		node.removeAttribute('force');
 	}, painted);

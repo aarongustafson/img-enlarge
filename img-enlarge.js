@@ -188,11 +188,14 @@ export class ImgEnlargeElement extends BaseElement {
 		return labels;
 	}
 
-	/** Reread markup, page labels, and inherited language, closing an open viewer. */
+	/** Reread configuration, closing the viewer and retaining opener focus. */
 	refresh() {
 		this._pending = false;
 		this._stopLayout();
 		this.close();
+		const restoreFocus =
+			this._trigger !== null &&
+			this.ownerDocument.activeElement === this._trigger;
 		this._anchor?.remove();
 		this._anchor = null;
 		this._trigger = null;
@@ -227,7 +230,9 @@ export class ImgEnlargeElement extends BaseElement {
 			this._anchor = anchor;
 			this._trigger = trigger;
 			this._observeLayout(image);
-			this._syncLayout();
+			this._syncLayout(restoreFocus);
+			if (restoreFocus && trigger.isConnected)
+				trigger.focus({ preventScroll: true });
 		} catch (error) {
 			this._state = 'error';
 			this._error(error, 'configuration');
@@ -315,7 +320,7 @@ export class ImgEnlargeElement extends BaseElement {
 			});
 	}
 
-	_syncLayout() {
+	_syncLayout(retainEligibility = false) {
 		try {
 			const image = this._image();
 			const rect = image.getBoundingClientRect();
@@ -356,6 +361,7 @@ export class ImgEnlargeElement extends BaseElement {
 			});
 			this._eligible =
 				this.hasAttribute('force') ||
+				retainEligibility ||
 				Boolean(this._viewer) ||
 				this.ownerDocument.activeElement === this._trigger ||
 				this._canEnlarge(image, rect);
@@ -406,8 +412,12 @@ export class ImgEnlargeElement extends BaseElement {
 		frame.dialog.style.visibility = 'hidden';
 		frame.dialog.style.pointerEvents = 'none';
 		frame.dialog.open = true;
+		frame.dialog.popover = 'manual';
 		try {
 			this.append(frame.dialog);
+			// Top-layer measurement preserves scoped styles without a transformed
+			// ancestor becoming the fixed-position containing block.
+			frame.dialog.showPopover?.();
 			const available = preview.getBoundingClientRect();
 			const factor = Math.min(
 				available.width / width,
@@ -581,8 +591,19 @@ export class ImgEnlargeElement extends BaseElement {
 			dimensions,
 			inferred: responsive ? dimensions : null,
 			alt: image.getAttribute('alt') ?? '',
+			altLanguage: ImgEnlargeElement._language(image),
 			caption: ImgEnlargeElement._caption(element, image),
+			captionLanguage: ImgEnlargeElement._language(
+				element.hasAttribute('caption')
+					? element
+					: (image.closest('figure')?.querySelector('figcaption') ??
+							element),
+			),
 		};
+	}
+
+	static _language(element) {
+		return element.closest('[lang]')?.getAttribute('lang') ?? '';
 	}
 
 	static _caption(element, image) {
@@ -820,16 +841,18 @@ export class ImgEnlargeElement extends BaseElement {
 		const image = this.ownerDocument.createElement('img');
 		image.className = 'img-enlarge-image';
 		image.alt = item.alt;
+		image.lang = item.altLanguage;
 		image.decoding = 'async';
 		const caption = this.ownerDocument.createElement('figcaption');
 		caption.className = 'img-enlarge-caption';
 		caption.textContent = item.caption;
+		caption.lang = item.captionLanguage;
 		caption.hidden = !item.caption.trim();
 		const complete = (state) => {
 			if (
 				this._viewer !== viewer ||
 				viewer.loads.get(index) !== record ||
-				record.state !== 'loading'
+				record.state === state
 			)
 				return;
 			record.state = state;

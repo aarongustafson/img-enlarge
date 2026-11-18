@@ -170,6 +170,11 @@ An empty `caption` suppresses that fallback. Captions are copied as plain text,
 not HTML, and alt text isn’t displayed as a caption. Supply meaningful alt text
 and captions for your content.
 
+The snapshot keeps each image’s and caption’s inherited `lang`, including an
+explicit empty value. A `caption` attribute uses the component’s language;
+copied `figcaption` text uses the caption element’s language. These languages
+don’t change the opener’s control labels.
+
 ### Loading and recovery
 
 Only visited enlarged images load. Loading and errors appear in visible status
@@ -185,6 +190,8 @@ from the thumbnail. Retrying
 uses the same URL and normal browser caching rules. A new opening rereads sources,
 image links, and captions. After editing a link’s `href` or `type`, call
 `refresh()` to reevaluate whether its image should get an enlarge button.
+If a later responsive source fails after an image has loaded, the viewer updates
+the error status and offers Retry again.
 The component doesn’t send HEAD availability probes: CORS restrictions or
 servers rejecting HEAD can make working images appear unavailable, and a
 successful HEAD doesn’t establish that an image will decode. See the
@@ -202,6 +209,8 @@ Image and container resizing, image loading, and viewport changes update the
 decision. A focused button stays available until focus leaves; an open viewer
 also keeps its opener. This avoids dropping focus during a layout change.
 No useful enlargement means `state === 'inactive'` and no added button.
+Refreshing a focused opener or an open viewer moves focus to the replacement
+opener, which stays available until focus leaves.
 For inferred responsive sources, the button also stays absent when the largest
 candidate is already selected or no candidate is wider than the displayed image.
 This decision uses resource hints, not a guarantee of sharpness or extra detail.
@@ -221,6 +230,9 @@ the largest responsive candidate is already selected:
 Changing image markup or changing dialog-only styling without a resize requires
 `refresh()` to reevaluate eligibility. Style the documented classes rather than
 relying on `:modal`-only layout rules: the sizing copy is a non-modal dialog.
+Where the Popover API is available, this hidden copy enters the top layer so
+transformed ancestors don’t change its viewport-based size. Older browsers use
+the non-modal in-page measurement.
 
 ## Collections and controls
 

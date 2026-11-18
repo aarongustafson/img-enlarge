@@ -26,7 +26,7 @@
 						{
 							"kind": "method",
 							"name": "refresh",
-							"description": "Close the viewer and reread image markup, component configuration, page JSON labels, and inherited language.",
+							"description": "Close the viewer and reread image markup, component configuration, page JSON labels, and inherited language. Preserve focus on a replacement opener until focus leaves.",
 							"return": { "type": { "text": "void" } }
 						},
 						{

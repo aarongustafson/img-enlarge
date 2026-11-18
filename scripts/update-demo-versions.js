@@ -19,7 +19,10 @@ let esmContent = readFileSync(esmPath, 'utf-8');
 
 // Replace version in the esm.sh URL
 esmContent = esmContent.replace(
-	new RegExp(`${packageName}@[\\d.]+\\/`, 'g'),
+	new RegExp(
+		`${packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}@\\d+\\.\\d+\\.\\d+(?:-[\\da-zA-Z.-]+)?(?:\\+[\\da-zA-Z.-]+)?\\/`,
+		'g',
+	),
 	`${packageName}@${version}/`,
 );
 

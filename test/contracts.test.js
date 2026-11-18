@@ -1,7 +1,6 @@
 import { afterEach, expect, it } from 'vitest';
 import {
 	readFile,
-	mkdtemp,
 	mkdir,
 	writeFile,
 	copyFile,
@@ -9,7 +8,7 @@ import {
 	readdir,
 	rm,
 } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
@@ -87,7 +86,8 @@ it('retains the versioned demo updater and release staging/push hooks without ru
 		'node scripts/update-demo-versions.js && git add demo/esm.html',
 	);
 	expect(pkg.scripts.postversion).toBe('git push --follow-tags');
-	fixture = await mkdtemp(join(tmpdir(), 'img-enlarge-version-'));
+	fixture = resolve(`.test-version-${randomUUID()}`);
+	await mkdir(fixture);
 	await mkdir(join(fixture, 'scripts'));
 	await mkdir(join(fixture, 'demo'));
 	await writeFile(
@@ -102,10 +102,17 @@ it('retains the versioned demo updater and release staging/push hooks without ru
 	execFileSync(process.execPath, [
 		join(fixture, 'scripts/update-demo-versions.mjs'),
 	]);
-	const demo = await readFile(join(fixture, 'demo/esm.html'), 'utf8');
-	expect(demo.match(/@aarongustafson\/img-enlarge@9\.8\.7\//g)).toHaveLength(
-		2,
-	);
+	for (const version of ['9.8.7-beta.0+build.1', '9.8.7-rc.2', '9.8.7']) {
+		await writeFile(
+			join(fixture, 'package.json'),
+			JSON.stringify({ name: pkg.name, version }),
+		);
+		execFileSync(process.execPath, [
+			join(fixture, 'scripts/update-demo-versions.mjs'),
+		]);
+		const demo = await readFile(join(fixture, 'demo/esm.html'), 'utf8');
+		expect(demo.split(`${pkg.name}@${version}/`)).toHaveLength(3);
+	}
 });
 
 it('builds a self-contained Pages artifact without uploading development files', async () => {
@@ -114,10 +121,12 @@ it('builds a self-contained Pages artifact without uploading development files',
 		/- name: Build Pages\s+run: \|\n([\s\S]+?)\n\s+- name: Setup Pages/,
 	)?.[1];
 	expect(build).toBeTruthy();
-	fixture = await mkdtemp(join(tmpdir(), 'img-enlarge-pages-'));
+	fixture = resolve(`.test-pages-${randomUUID()}`);
+	await mkdir(fixture);
 	await mkdir(join(fixture, 'demo'));
 	for (const file of [
 		'README.md',
+		'LICENSE',
 		'img-enlarge.js',
 		'img-enlarge-styles.js',
 		'define.js',
@@ -126,7 +135,8 @@ it('builds a self-contained Pages artifact without uploading development files',
 	]) {
 		await copyFile(file, join(fixture, file));
 	}
-	await copyFile('demo/index.html', join(fixture, 'demo/index.html'));
+	for (const file of ['index.html', 'esm.html', 'unpkg.html'])
+		await copyFile(`demo/${file}`, join(fixture, 'demo', file));
 	await symlink(resolve('node_modules'), join(fixture, 'node_modules'));
 	await writeFile(
 		join(fixture, 'development-only.txt'),
@@ -137,6 +147,8 @@ it('builds a self-contained Pages artifact without uploading development files',
 		encoding: 'utf8',
 	});
 	expect((await readdir(join(fixture, '_site'))).sort()).toEqual([
+		'LICENSE',
+		'README.md',
 		'define.js',
 		'demo',
 		'img-enlarge-styles.js',
@@ -151,4 +163,15 @@ it('builds a self-contained Pages artifact without uploading development files',
 		await readFile('demo/index.html', 'utf8'),
 	);
 	expect(workflow).toMatch(/path: ['"]?_site['"]?/);
+	for (const file of ['esm.html', 'unpkg.html']) {
+		const demo = await readFile(join(fixture, '_site/demo', file), 'utf8');
+		expect(demo).toContain('../README.md');
+		expect(await readFile(join(fixture, '_site/README.md'), 'utf8')).toBe(
+			await readFile('README.md', 'utf8'),
+		);
+	}
+	expect(html).toContain('href="LICENSE"');
+	expect(await readFile(join(fixture, '_site/LICENSE'), 'utf8')).toBe(
+		await readFile('LICENSE', 'utf8'),
+	);
 });

@@ -24,6 +24,88 @@ function append(
 }
 
 describe('img-enlarge', () => {
+	it('preserves image and caption languages independently of the opener controls', async () => {
+		const first = append('name="languages" lang="en"');
+		append(
+			'name="languages" lang="fr"',
+			'<figure><img lang="de" src="/small.svg" alt="Berge"><figcaption lang="fr-CA">Montagnes</figcaption></figure>',
+		);
+		await settle();
+		first.open();
+		first.next();
+		let slide = document.querySelector(
+			'.img-enlarge-slide[aria-hidden="false"]',
+		);
+		expect(document.querySelector('dialog').lang).toBe('en');
+		expect(slide.querySelector('img').lang).toBe('de');
+		expect(slide.querySelector('figcaption').lang).toBe('fr-CA');
+		first.close();
+		const second = document.querySelectorAll('img-enlarge')[1];
+		second.setAttribute('caption', 'Légende');
+		await settle();
+		first.open();
+		first.next();
+		slide = document.querySelector(
+			'.img-enlarge-slide[aria-hidden="false"]',
+		);
+		expect(slide.querySelector('figcaption').lang).toBe('fr');
+	});
+
+	it('handles later responsive resource failures, duplicate events, and recovery', async () => {
+		const element = append('srcset="/small.svg 400w, /large.svg 1200w"');
+		const errors = vi.fn();
+		element.addEventListener('img-enlarge:error', errors);
+		await settle();
+		element.open();
+		const image = document.querySelector('dialog img');
+		image.dispatchEvent(new Event('load'));
+		image.dispatchEvent(new Event('error'));
+		image.dispatchEvent(new Event('error'));
+		expect(errors).toHaveBeenCalledTimes(1);
+		expect(document.querySelector('[data-action="retry"]').hidden).toBe(
+			false,
+		);
+		expect(document.querySelector('[role="status"]').textContent).toContain(
+			'could not be loaded',
+		);
+		image.dispatchEvent(new Event('load'));
+		expect(document.querySelector('[data-action="retry"]').hidden).toBe(
+			true,
+		);
+		expect(document.querySelector('[role="status"]').textContent).toBe(
+			'1 of 1',
+		);
+		element.close();
+		image.dispatchEvent(new Event('error'));
+		expect(errors).toHaveBeenCalledTimes(1);
+	});
+
+	it.each([
+		['lang="fr"', '', '', 'fr', 'fr'],
+		['lang="en"', '', 'lang="fr"', 'en', 'fr'],
+		['lang="fr"', 'lang=""', 'lang=""', '', ''],
+	])(
+		'retains authored language inheritance and resets: %s %s %s',
+		async (host, image, caption, altLanguage, captionLanguage) => {
+			const first = append('name="languages" lang="en"');
+			append(
+				`name="languages" ${host}`,
+				`<figure><img ${image} src="/small.svg" alt="Mountains"><figcaption ${caption}>Caption</figcaption></figure>`,
+			);
+			await settle();
+			first.open();
+			first.next();
+			const slide = document.querySelector(
+				'.img-enlarge-slide[aria-hidden="false"]',
+			);
+			expect(slide.querySelector('img').lang).toBe(altLanguage);
+			expect(slide.querySelector('figcaption').lang).toBe(
+				captionLanguage,
+			);
+			expect(document.querySelector('dialog').lang).toBe('en');
+		},
+	);
+
 	beforeEach(() => {
 		vi.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(
 			false,

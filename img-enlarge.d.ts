@@ -31,7 +31,7 @@ export class ImgEnlargeElement extends HTMLElement {
 		previous: string | null,
 		value: string | null,
 	): void;
-	/** Reread markup, page JSON labels, and inherited language; close any open viewer. */
+	/** Reread markup, labels, and language; close the viewer and retain opener focus. */
 	refresh(): void;
 	/** Open this image's collection when enlargement is useful or force is present. */
 	open(): void;
