@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>&lt;img-enlarge&gt; — une seule langue</title>
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/microlighter@2.2.0/dist/themes/github.css"
+		/>
+		<link rel="stylesheet" href="./styles.css" />
+		<link rel="stylesheet" href="./demo-shell.css" />
+	</head>
+	<body data-syntax-theme="github">
+		<a class="skip-link" href="#main">Skip to examples</a>
+		<header>
+			<p class="eyebrow">Web component / labels-flat</p>
+			<h1>&lt;img-enlarge&gt;</h1>
+			<p class="lede">
+				Une configuration pour toute la page.
+				<a
+					href="https://github.com/aarongustafson/img-enlarge/blob/main/README.md"
+					>README</a
+				>
+				· <a href="./index.html" lang="en">All examples</a>
+			</p>
+			<nav aria-label="Component resources">
+				<a
+					href="https://github.com/aarongustafson/img-enlarge/blob/main/README.md"
+					>Read the README</a
+				>
+				<a href="https://github.com/aarongustafson/img-enlarge"
+					>View on GitHub</a
+				>
+				<a href="./index.html">All examples</a>
+				<a href="./esm.html">esm.sh example</a>
+				<a href="./unpkg.html">unpkg example</a>
+			</nav>
+		</header>
+		<main id="main" tabindex="-1">
+			<p
+				id="microlighter-status"
+				class="enhancement-status"
+				role="status"
+				hidden
+			></p>
+
+			<section class="demo-section">
+				<h2>Définir les libellés une seule fois</h2>
+				<p>
+					Une page dans une seule langue peut utiliser un objet
+					simple, sans codes de langue. Le document indique sa langue
+					avec
+					<code>&lt;html lang="fr"&gt;</code>. Chaque image du groupe
+					utilise les mêmes libellés, sans attributs de traduction
+					répétés. Sans JavaScript, les images et leurs liens restent
+					disponibles.
+				</p>
+				<div class="code-demo-pair">
+					<micro-lighter
+						class="code-panel"
+						language="html"
+						controls="copy"
+						data-label="HTML"
+					>
+						<pre
+							aria-label="Définir les libellés une seule fois code 1"
+							tabindex="0"
+						><code><mark>&lt;script type="application/json" data-img-enlarge-config&gt;
+{
+  "open-label": "Agrandir l’image",
+  "dialog-label": "Images agrandies",
+  "close-label": "Fermer",
+  "previous-label": "Image précédente",
+  "next-label": "Image suivante",
+  "loading-label": "Chargement de l’image",
+  "error-label": "Impossible de charger l’image.",
+  "retry-label": "Réessayer",
+  "position-label": "{current} sur {total}"
+}
+&lt;/script&gt;</mark>
+
+<mark>&lt;img-enlarge name="velo"&gt;</mark>
+  &lt;a href="./bicycle.svg"&gt;
+    &lt;img src="./bicycle.svg" alt="Un vélo rouge avec un panier."&gt;
+  &lt;/a&gt;
+<mark>&lt;/img-enlarge&gt;</mark>
+<mark>&lt;img-enlarge name="velo"&gt;</mark>
+  &lt;a href="./bicycle-basket.svg"&gt;
+    &lt;img src="./bicycle-basket.svg" alt="Un panier au-dessus de la roue avant."&gt;
+  &lt;/a&gt;
+<mark>&lt;/img-enlarge&gt;</mark>
+
+<mark>&lt;script type="module" src="../define.js"&gt;&lt;/script&gt;</mark></code></pre>
+					</micro-lighter>
+					<div class="demo collection-thumbnails">
+						<script type="application/json" data-img-enlarge-config>
+							{
+								"open-label": "Agrandir l’image",
+								"dialog-label": "Images agrandies",
+								"close-label": "Fermer",
+								"previous-label": "Image précédente",
+								"next-label": "Image suivante",
+								"loading-label": "Chargement de l’image",
+								"error-label": "Impossible de charger l’image.",
+								"retry-label": "Réessayer",
+								"position-label": "{current} sur {total}"
+							}
+						</script>
+						<img-enlarge id="flat-first" name="velo">
+							<a href="./bicycle.svg">
+								<img
+									src="./bicycle.svg"
+									width="640"
+									height="360"
+									alt="Un vélo rouge avec un panier."
+								/>
+							</a>
+						</img-enlarge>
+						<img-enlarge name="velo">
+							<a href="./bicycle-basket.svg">
+								<img
+									src="./bicycle-basket.svg"
+									width="360"
+									height="360"
+									alt="Un panier au-dessus de la roue avant."
+								/>
+							</a>
+						</img-enlarge>
+					</div>
+				</div>
+				<p>
+					Échap ferme la fenêtre et rend le focus au bouton qui l’a
+					ouverte. Les boutons et les flèches du clavier permettent de
+					parcourir les images, sans retour automatique au début.
+				</p>
+			</section>
+		</main>
+		<footer>
+			<p lang="en">
+				Made with ❤️ by
+				<a href="https://aarongustafson.com">Aaron Gustafson</a>. View
+				the source on
+				<a href="https://github.com/aarongustafson/img-enlarge"
+					>GitHub</a
+				>.
+			</p>
+		</footer>
+		<script type="module" src="../define.js"></script>
+		<script type="module" src="./code-examples.js"></script>
+	</body>
+</html>

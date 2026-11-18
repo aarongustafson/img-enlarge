@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>&lt;img-enlarge&gt; via unpkg</title>
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/microlighter@2.2.0/dist/themes/github.css"
+		/>
+		<link rel="stylesheet" href="./styles.css" />
+		<link rel="stylesheet" href="./demo-shell.css" />
+	</head>
+	<body data-syntax-theme="github">
+		<a class="skip-link" href="#main">Skip to examples</a>
+		<header>
+			<p class="eyebrow">Web component / unpkg</p>
+			<h1>&lt;img-enlarge&gt;</h1>
+			<p class="lede">
+				This example imports the automatic registration module. It
+				requires an npm publication. Use the
+				<a href="./index.html">local demo</a> for the unpublished draft.
+				Read the <a href="../README.md">README</a> for the API.
+			</p>
+			<nav aria-label="Component resources">
+				<a
+					href="https://github.com/aarongustafson/img-enlarge/blob/main/README.md"
+					>Read the README</a
+				>
+				<a href="https://github.com/aarongustafson/img-enlarge"
+					>View on GitHub</a
+				>
+				<a href="./index.html">All examples</a>
+				<a href="./esm.html">esm.sh example</a>
+			</nav>
+		</header>
+		<main id="main" tabindex="-1">
+			<p
+				id="microlighter-status"
+				class="enhancement-status"
+				role="status"
+				hidden
+			></p>
+
+			<section class="demo-section">
+				<h2>Import automatic registration</h2>
+				<div class="code-demo-pair">
+					<micro-lighter
+						class="code-panel"
+						language="html"
+						controls="copy"
+						data-label="HTML"
+					>
+						<pre
+							aria-label="Import automatic registration code 1"
+							tabindex="0"
+						><code>&lt;script type="module"&gt;
+  <mark>import 'https://unpkg.com/@aarongustafson/img-enlarge/define.js?module';</mark>
+&lt;/script&gt;
+
+<mark>&lt;img-enlarge&gt;</mark>
+  &lt;img src="./mountains.svg" alt="A trail through green mountains."&gt;
+<mark>&lt;/img-enlarge&gt;</mark></code></pre>
+					</micro-lighter>
+					<div class="demo">
+						<img-enlarge>
+							<img
+								src="./mountains.svg"
+								width="800"
+								height="400"
+								alt="A trail through green mountains."
+							/>
+						</img-enlarge>
+					</div>
+				</div>
+			</section>
+		</main>
+		<footer>
+			<p>
+				Made with ❤️ by
+				<a href="https://github.com/aarongustafson">Aaron Gustafson</a>.
+				View the source on
+				<a href="https://github.com/aarongustafson/img-enlarge"
+					>GitHub</a
+				>.
+			</p>
+		</footer>
+		<script type="module">
+			import 'https://unpkg.com/@aarongustafson/img-enlarge/define.js?module';
+		</script>
+		<script type="module" src="./code-examples.js"></script>
+	</body>
+</html>
