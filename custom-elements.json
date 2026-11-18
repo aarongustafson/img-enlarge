@@ -1,0 +1,298 @@
+{
+	"schemaVersion": "1.0.0",
+	"readme": "README.md",
+	"modules": [
+		{
+			"kind": "javascript-module",
+			"path": "img-enlarge.js",
+			"declarations": [
+				{
+					"kind": "class",
+					"name": "ImgEnlargeElement",
+					"description": "Enhance one authored image with a modal enlarged view. Unnamed images open independently; matching nonempty name attributes opt into galleries. Preserve light-DOM image links and responsive sources. Shared labels come from inline script[type='application/json'][data-img-enlarge-config]: an empty marker sets page defaults; a value targets that gallery name. Each script accepts a flat label object or language dictionaries selected by inherited lang with regional-to-base fallback. Merge per key: individual label attributes, named configuration, page configuration, built-in English defaults. Valid unchanged JSON is cached per script. Refresh after editing configuration or inherited language. Duplicate scripts for an applicable scope or invalid configuration emit a configuration error and preserve authored content. No availability probes or enlargement downloads run before opening. Known thumbnail dimensions reserve the enlarged image box while loading or failed. Failed images stay visible with native browser fallback rendering, error status, Retry, and Close. Successful images use their own proportions.",
+					"tagName": "img-enlarge",
+					"customElement": true,
+					"superclass": { "name": "HTMLElement" },
+					"members": [
+						{
+							"kind": "field",
+							"name": "state",
+							"readonly": true,
+							"type": {
+								"text": "'idle' | 'inactive' | 'ready' | 'open' | 'error'"
+							},
+							"description": "Connection, responsive eligibility, configuration, and modal state; inactive means enlargement adds no space or no larger inferred responsive candidate remains. Image loading errors do not close the modal."
+						},
+						{
+							"kind": "method",
+							"name": "refresh",
+							"description": "Close the viewer and reread image markup, component configuration, page JSON labels, and inherited language. Preserve focus on a replacement opener until focus leaves.",
+							"return": { "type": { "text": "void" } }
+						},
+						{
+							"kind": "method",
+							"name": "open",
+							"description": "Initialize pending connected collection members and open a snapshot at this image, preserving each authored image's referrerpolicy and crossorigin before requesting enlarged sources. A viewer opened by the previous viewer's close listener takes precedence over the interrupted opening.",
+							"return": { "type": { "text": "void" } }
+						},
+						{
+							"kind": "method",
+							"name": "close",
+							"description": "Close and remove the viewer, restoring opener focus when connected.",
+							"return": { "type": { "text": "void" } }
+						},
+						{
+							"kind": "method",
+							"name": "next",
+							"description": "Navigate forward without wrapping.",
+							"return": { "type": { "text": "void" } }
+						},
+						{
+							"kind": "method",
+							"name": "previous",
+							"description": "Navigate backward without wrapping.",
+							"return": { "type": { "text": "void" } }
+						}
+					],
+					"attributes": [
+						{
+							"name": "src",
+							"type": { "text": "string" },
+							"description": "Explicit enlarged image URL; overrides image-link and original-candidate inference. Without component src or srcset, use the authored image's enclosing image link before responsive candidate inference. Recognize an image MIME type hint or, without a nonempty type hint, an apng, avif, bmp, gif, ico, jfif, jpg, jpeg, png, svg, or webp pathname extension, case-insensitively and ignoring query/fragment. The fallback is authored currentSrc, then src. HTTP(S), blob, and image data URLs only."
+						},
+						{
+							"name": "srcset",
+							"type": { "text": "string" },
+							"description": "Explicit responsive enlargement candidates; override image-link and original-candidate inference. Without explicit sources or an identified image link, infer width candidates from the authored image or unambiguous selected picture branch; density descriptors use loaded natural dimensions. Original markup is preserved."
+						},
+						{
+							"name": "sizes",
+							"type": { "text": "string" },
+							"description": "Optional enlarged-image sizes. Overrides the measured painted width for inferred candidates; browser defaults apply to explicit srcset when absent."
+						},
+						{
+							"name": "caption",
+							"type": { "text": "string" },
+							"description": "Plain-text caption, overriding the image's enclosing figure figcaption. Empty suppresses the caption."
+						},
+						{
+							"name": "name",
+							"type": { "text": "string" },
+							"description": "Case-sensitive gallery name. Matching nonempty names opt into a shared collection in document order; absent or empty opens only this image. Also selects a matching data-img-enlarge-config label script.",
+							"default": "\"\""
+						},
+						{
+							"name": "controls",
+							"type": { "text": "'auto' | 'buttons'" },
+							"description": "Use supported CSS scroll buttons or force JavaScript-generated buttons.",
+							"default": "\"auto\""
+						},
+						{
+							"name": "force",
+							"type": { "text": "boolean" },
+							"default": "false",
+							"description": "Always offer enlargement, even when the displayed image is as large as the styled viewer would show it or the largest inferred responsive candidate is already selected."
+						},
+						{
+							"name": "open-label",
+							"type": { "text": "string" },
+							"default": "\"Enlarge image\"",
+							"description": "Nonempty opener text."
+						},
+						{
+							"name": "dialog-label",
+							"type": { "text": "string" },
+							"default": "\"Enlarged images\"",
+							"description": "Nonempty modal accessible name."
+						},
+						{
+							"name": "close-label",
+							"type": { "text": "string" },
+							"default": "\"Close\"",
+							"description": "Nonempty Close text."
+						},
+						{
+							"name": "previous-label",
+							"type": { "text": "string" },
+							"default": "\"Previous image\"",
+							"description": "Nonempty previous control name for both control paths."
+						},
+						{
+							"name": "next-label",
+							"type": { "text": "string" },
+							"default": "\"Next image\"",
+							"description": "Nonempty next control name for both control paths."
+						},
+						{
+							"name": "loading-label",
+							"type": { "text": "string" },
+							"default": "\"Loading image\"",
+							"description": "Nonempty loading status text."
+						},
+						{
+							"name": "error-label",
+							"type": { "text": "string" },
+							"default": "\"The image could not be loaded.\"",
+							"description": "Nonempty load-failure status text."
+						},
+						{
+							"name": "retry-label",
+							"type": { "text": "string" },
+							"default": "\"Try again\"",
+							"description": "Nonempty retry text."
+						},
+						{
+							"name": "position-label",
+							"type": { "text": "string" },
+							"default": "\"{current} of {total}\"",
+							"description": "Nonempty position template containing both {current} and {total}."
+						}
+					],
+					"events": [
+						{
+							"name": "img-enlarge:open",
+							"type": {
+								"text": "CustomEvent<ImgEnlargeChangeDetail>"
+							},
+							"description": "Bubbles from the opener after opening; detail has zero-based index, total, and the current component."
+						},
+						{
+							"name": "img-enlarge:change",
+							"type": {
+								"text": "CustomEvent<ImgEnlargeChangeDetail>"
+							},
+							"description": "Bubbles from the opener on the initial selection and each changed selection."
+						},
+						{
+							"name": "img-enlarge:close",
+							"type": {
+								"text": "CustomEvent<Record<string, never>>"
+							},
+							"description": "Bubbles from the opener after teardown, with empty detail."
+						},
+						{
+							"name": "img-enlarge:error",
+							"type": {
+								"text": "CustomEvent<ImgEnlargeErrorDetail>"
+							},
+							"description": "Bubbles with error, phase (configuration, open, or load), and the affected component."
+						}
+					],
+					"cssProperties": [
+						{
+							"name": "--img-enlarge-trigger-inset-block-start",
+							"default": "0.5rem",
+							"description": "Enlarge button inset from the image's block-start edge."
+						},
+						{
+							"name": "--img-enlarge-trigger-inset-inline-end",
+							"default": "0.5rem",
+							"description": "Enlarge button inset from the image's inline-end edge."
+						},
+						{
+							"name": "--img-enlarge-control-size",
+							"default": "2.75rem",
+							"description": "Minimum icon-control size, also used to size centered navigation controls."
+						},
+						{
+							"name": "--img-enlarge-control-inset",
+							"default": "0.5rem",
+							"description": "Close and navigation control inset from the dialog edges."
+						},
+						{
+							"name": "--img-enlarge-dialog-padding",
+							"default": "3.5rem 3.5rem 1rem",
+							"description": "Dialog padding, reserving room for overlaid controls."
+						},
+						{
+							"name": "--img-enlarge-dialog-inline-size",
+							"default": "min(70rem, calc(100% - 2rem))",
+							"description": "Preferred dialog inline size, capped to the viewport."
+						},
+						{
+							"name": "--img-enlarge-dialog-gap",
+							"default": "0.75rem",
+							"description": "Gap between the dialog's grid rows."
+						},
+						{
+							"name": "--img-enlarge-slide-gap",
+							"default": "0.5rem",
+							"description": "Inline gap between full-width gallery slides, providing separation against fractional scroll rounding."
+						},
+						{
+							"name": "--img-enlarge-image-max-block-size",
+							"default": "65dvh",
+							"description": "Maximum block size of enlarged images."
+						},
+						{
+							"name": "--img-enlarge-caption-gap",
+							"default": "0.75rem",
+							"description": "Caption block-start margin."
+						},
+						{
+							"name": "--disabled-button-visibility",
+							"default": "visible",
+							"description": "Visibility of disabled navigation arrows in both control paths. Set hidden to hide them without shifting layout; focused arrows remain visible until focus leaves."
+						}
+					],
+					"cssParts": [],
+					"slots": []
+				}
+			],
+			"exports": [
+				{
+					"kind": "js",
+					"name": "ImgEnlargeElement",
+					"declaration": {
+						"name": "ImgEnlargeElement",
+						"module": "img-enlarge.js"
+					}
+				}
+			]
+		},
+		{
+			"kind": "javascript-module",
+			"path": "define.js",
+			"declarations": [
+				{
+					"kind": "function",
+					"name": "defineImgEnlarge",
+					"description": "Register img-enlarge when a browser registry exists; called automatically on import. Return false without a registry, true otherwise.",
+					"return": { "type": { "text": "boolean" } }
+				}
+			],
+			"exports": [
+				{
+					"kind": "js",
+					"name": "defineImgEnlarge",
+					"declaration": {
+						"name": "defineImgEnlarge",
+						"module": "define.js"
+					}
+				},
+				{
+					"kind": "custom-element-definition",
+					"name": "img-enlarge",
+					"declaration": {
+						"name": "ImgEnlargeElement",
+						"module": "img-enlarge.js"
+					}
+				}
+			]
+		},
+		{
+			"kind": "javascript-module",
+			"path": "index.js",
+			"exports": [
+				{
+					"kind": "js",
+					"name": "ImgEnlargeElement",
+					"declaration": {
+						"name": "ImgEnlargeElement",
+						"module": "img-enlarge.js"
+					}
+				}
+			]
+		}
+	]
+}
