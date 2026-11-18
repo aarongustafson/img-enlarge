@@ -49,6 +49,8 @@ nonempty `name` values to connect them into a gallery; see
 
 Once published, install with `npm install @aarongustafson/img-enlarge`. Import
 `@aarongustafson/img-enlarge/define.js` for automatic registration.
+The registration import includes TypeScript definitions for the element and
+its events.
 Importing the package root or `img-enlarge.js` exports the class **without**
 registering it:
 

@@ -58,7 +58,7 @@
 		"test:run": "vitest run",
 		"test:coverage": "vitest run --coverage",
 		"test:browser": "playwright test",
-		"test:types": "tsc --noEmit --strict --lib DOM,ES2022 --module NodeNext --moduleResolution NodeNext test/types.ts",
+		"test:types": "tsc --noEmit --strict --lib DOM,ES2022 --module NodeNext --moduleResolution NodeNext test/types.ts && tsc --noEmit --strict --lib DOM,ES2022 --module NodeNext --moduleResolution NodeNext test/types-define.ts",
 		"lint": "npm run lint:eslint && npm run lint:prettier",
 		"format": "npm run format:eslint && npm run format:prettier",
 		"lint:eslint": "eslint .",
