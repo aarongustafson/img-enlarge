@@ -105,6 +105,45 @@ async function serveDemo(
 	});
 }
 
+for (const grammarFailure of [false, true]) {
+	test(`French page keeps English demo chrome correctly identified with grammar failure=${grammarFailure}`, async ({
+		page,
+	}) => {
+		await serveDemo(page, { grammarFailure });
+		await page.goto('http://code-demo.test/demo/labels-flat.html');
+		if (grammarFailure)
+			await expect(page.locator('#microlighter-status')).toContainText(
+				'MicroLighter could not load.',
+			);
+		else await expect(page.locator('#microlighter-status')).toBeHidden();
+		for (const selector of ['.skip-link', 'nav', '#microlighter-status']) {
+			expect(
+				await page
+					.locator(selector)
+					.evaluate((element) => element.closest('[lang]').lang),
+			).toBe('en');
+		}
+		for (const selector of ['h2', 'micro-lighter pre']) {
+			expect(
+				await page
+					.locator(selector)
+					.first()
+					.evaluate((element) => element.closest('[lang]').lang),
+			).toBe('fr');
+		}
+		if (!grammarFailure)
+			expect(
+				await page
+					.getByRole('button', { name: 'Copy', exact: true })
+					.evaluate(
+						(button) =>
+							button.closest('[lang]')?.lang ||
+							button.getRootNode().host.closest('[lang]').lang,
+					),
+			).toBe('en');
+	});
+}
+
 const examples = [];
 for (const file of (await readdir(new URL('demo/', root)))
 	.filter((file) => file.endsWith('.html'))
