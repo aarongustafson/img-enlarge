@@ -437,12 +437,16 @@ export class ImgEnlargeElement extends BaseElement {
 		const name = this.getAttribute('name') ?? '';
 		if (!name) return [this];
 		return [...this.ownerDocument.querySelectorAll('img-enlarge')].filter(
-			(element) =>
-				element instanceof ImgEnlargeElement &&
-				element._trigger &&
-				element.state !== 'error' &&
-				!element.closest('[hidden], [inert]') &&
-				element.getAttribute('name') === name,
+			(element) => {
+				if (
+					!(element instanceof ImgEnlargeElement) ||
+					element.closest('[hidden], [inert]') ||
+					element.getAttribute('name') !== name
+				)
+					return false;
+				if (!element._trigger && element._pending) element.refresh();
+				return element._trigger && element.state !== 'error';
+			},
 		);
 	}
 
@@ -524,7 +528,15 @@ export class ImgEnlargeElement extends BaseElement {
 				source.getAttribute('srcset') ?? '',
 				source.baseURI,
 			);
-			if (!candidates) continue;
+			if (!candidates) {
+				if (
+					source === image &&
+					image.getAttribute('src') &&
+					image.src === image.currentSrc
+				)
+					matches.push(null);
+				continue;
+			}
 			if (
 				source === image &&
 				candidates[0].kind === 'x' &&
@@ -592,6 +604,8 @@ export class ImgEnlargeElement extends BaseElement {
 			inferred: responsive ? dimensions : null,
 			alt: image.getAttribute('alt') ?? '',
 			altLanguage: ImgEnlargeElement._language(image),
+			referrerPolicy: image.getAttribute('referrerpolicy'),
+			crossOrigin: image.getAttribute('crossorigin'),
 			caption: ImgEnlargeElement._caption(element, image),
 			captionLanguage: ImgEnlargeElement._language(
 				element.hasAttribute('caption')
@@ -614,7 +628,7 @@ export class ImgEnlargeElement extends BaseElement {
 		);
 	}
 
-	/** Open a snapshot of the current collection at this image. */
+	/** Open a collection snapshot, preserving authored image request policies. */
 	open() {
 		if (!this.isConnected || this._viewer) return;
 		if (!this._trigger) this.refresh();
@@ -629,6 +643,12 @@ export class ImgEnlargeElement extends BaseElement {
 					'A hidden or inert image cannot open a collection.',
 				);
 			activeViewers.get(this.ownerDocument)?.close();
+			if (
+				this._viewer ||
+				activeViewers.has(this.ownerDocument) ||
+				!this.isConnected
+			)
+				return;
 			this._createViewer(items, index);
 			activeViewers.set(this.ownerDocument, this);
 			this._viewer.dialog.showModal();
@@ -843,6 +863,10 @@ export class ImgEnlargeElement extends BaseElement {
 		image.alt = item.alt;
 		image.lang = item.altLanguage;
 		image.decoding = 'async';
+		if (item.referrerPolicy !== null)
+			image.setAttribute('referrerpolicy', item.referrerPolicy);
+		if (item.crossOrigin !== null)
+			image.setAttribute('crossorigin', item.crossOrigin);
 		const caption = this.ownerDocument.createElement('figcaption');
 		caption.className = 'img-enlarge-caption';
 		caption.textContent = item.caption;

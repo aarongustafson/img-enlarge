@@ -60,6 +60,58 @@ async function serve(page, controls = 'auto', enhanced = true) {
 		).toBeVisible();
 }
 
+test('opening from a previous viewer’s close callback leaves exactly one modal and restores focus', async ({
+	page,
+}) => {
+	await serve(page, 'buttons');
+	await page.locator('#mountains').evaluate((first) => {
+		const second = document.querySelector('#bicycle');
+		first.open();
+		first.addEventListener('img-enlarge:close', () => second.open(), {
+			once: true,
+		});
+		second.open();
+	});
+	await expect(page.locator('dialog')).toHaveCount(1);
+	await expect(page.locator('dialog [data-action="close"]')).toBeFocused();
+	await page.locator('dialog [data-action="close"]').click();
+	await expect(page.locator('dialog')).toHaveCount(0);
+	await expect(page.locator('#bicycle .img-enlarge-trigger')).toBeFocused();
+});
+
+test('generated image requests retain no-referrer and anonymous CORS policies before loading', async ({
+	page,
+}) => {
+	await page.route('https://images.test/enlarged.svg', (route) =>
+		route.fulfill({
+			contentType: 'image/svg+xml',
+			headers: { 'access-control-allow-origin': '*' },
+			body: files.get('/demo/mountains-large.svg'),
+		}),
+	);
+	await serve(page, 'buttons');
+	const host = page.locator('#mountains');
+	await host.evaluate((element) => {
+		const original = element.querySelector('img');
+		original.setAttribute('referrerpolicy', 'no-referrer');
+		original.setAttribute('crossorigin', 'anonymous');
+		element.setAttribute('src', 'https://images.test/enlarged.svg');
+		element.refresh();
+	});
+	const [request] = await Promise.all([
+		page.waitForRequest('https://images.test/enlarged.svg'),
+		host.evaluate((element) => element.open()),
+	]);
+	expect(await request.headerValue('referer')).toBeNull();
+	expect(await request.headerValue('origin')).toBe('http://enlarge.test');
+	const image = page.locator('dialog img');
+	await expect(image).toHaveAttribute('crossorigin', 'anonymous');
+	await expect(image).toHaveAttribute('referrerpolicy', 'no-referrer');
+	await expect
+		.poll(() => image.evaluate((element) => element.naturalWidth))
+		.toBeGreaterThan(0);
+});
+
 test('refresh preserves focused openers and closes viewers back to a focused replacement', async ({
 	page,
 }) => {

@@ -144,7 +144,7 @@ might use 400px and 800px files while the viewer uses separate 1600px and
 </img-enlarge>
 ```
 
-The attributes on `<img>` still configure only the authored thumbnail. The
+The source and sizing attributes on `<img>` configure only the authored thumbnail. The
 attributes on `<img-enlarge>` configure only the generated viewer image;
 those separate enlargement files aren’t requested until their slide is visited.
 This override isn’t needed when both views can use the authored image’s candidates.
@@ -161,6 +161,10 @@ It doesn’t change the authored image’s `sizes`.
 
 All resolved enlargement URLs use the same validation: HTTP(S), blob, and image
 data URLs only. Relative URLs resolve against the component’s base URL.
+
+The viewer snapshots each authored image’s `referrerpolicy` and `crossorigin`,
+including empty values, and applies them before requesting enlarged sources.
+Explicit enlargement URLs don’t relax those request policies.
 
 ### Alternative text and captions
 
@@ -242,7 +246,11 @@ the non-modal in-page measurement.
 - Components with invalid configuration or `[hidden]`/`[inert]` ancestors
   don’t join collections.
 - Each opening takes a snapshot in document order. Close and reopen to pick up
-  additions, removals, source changes, or reordered images.
+  additions, removals, source changes, or reordered images. Connected members
+  still awaiting their setup microtask are initialized before the snapshot.
+- Opening another viewer closes the current one. If a close-event listener opens
+  a viewer, that callback’s viewer remains active; the interrupted opening doesn’t
+  create a second dialog.
 
 ```html
 <img-enlarge name="details">

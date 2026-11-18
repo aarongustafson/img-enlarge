@@ -24,6 +24,85 @@ function append(
 }
 
 describe('img-enlarge', () => {
+	it.each(['same opener', 'another opener'])(
+		'does not orphan a viewer when a close callback opens the %s',
+		async (target) => {
+			const first = append();
+			const second = append();
+			const third = append();
+			await settle();
+			first.open();
+			const callbackOpener = target === 'same opener' ? second : third;
+			first.addEventListener(
+				'img-enlarge:close',
+				() => callbackOpener.open(),
+				{ once: true },
+			);
+			second.open();
+			expect(document.querySelectorAll('dialog')).toHaveLength(1);
+			expect(callbackOpener.state).toBe('open');
+			callbackOpener.close();
+			expect(document.querySelectorAll('dialog')).toHaveLength(0);
+		},
+	);
+
+	it('includes connected gallery members whose setup microtasks are still pending', () => {
+		const first = append('name="pending"');
+		append('name="pending"');
+		first.open();
+		expect(document.querySelectorAll('.img-enlarge-slide')).toHaveLength(2);
+		first.next();
+		expect(document.querySelector('[role="status"]').textContent).toContain(
+			'2 of 2',
+		);
+	});
+
+	it.each([
+		['no-referrer', 'anonymous'],
+		['origin', 'use-credentials'],
+		['', ''],
+		[null, null],
+	])(
+		'preserves snapshotted image request policies: %s %s',
+		async (referrerPolicy, crossOrigin) => {
+			const first = append('name="policies"');
+			const second = append('name="policies"');
+			const original = second.querySelector('img');
+			if (referrerPolicy !== null)
+				original.setAttribute('referrerpolicy', referrerPolicy);
+			if (crossOrigin !== null)
+				original.setAttribute('crossorigin', crossOrigin);
+			await settle();
+			first.open();
+			original.setAttribute('referrerpolicy', 'unsafe-url');
+			original.removeAttribute('crossorigin');
+			first.next();
+			const image = document.querySelector(
+				'.img-enlarge-slide[aria-hidden="false"] img',
+			);
+			expect(image.getAttribute('referrerpolicy')).toBe(referrerPolicy);
+			expect(image.getAttribute('crossorigin')).toBe(crossOrigin);
+		},
+	);
+
+	it('does not infer an inactive picture branch sharing the src-only fallback URL', async () => {
+		const element = append(
+			'',
+			'<picture><source media="(min-width: 80rem)" srcset="/small.svg 400w, /wide.svg 1600w"><img src="/small.svg" alt="Mountains"></picture>',
+		);
+		const original = element.querySelector('img');
+		vi.spyOn(original, 'currentSrc', 'get').mockReturnValue(
+			new URL('/small.svg', document.baseURI).href,
+		);
+		vi.spyOn(original, 'naturalWidth', 'get').mockReturnValue(400);
+		vi.spyOn(original, 'naturalHeight', 'get').mockReturnValue(200);
+		await settle();
+		element.open();
+		const image = document.querySelector('dialog img');
+		expect(image.src).toBe(original.currentSrc);
+		expect(image.hasAttribute('srcset')).toBe(false);
+	});
+
 	it('preserves image and caption languages independently of the opener controls', async () => {
 		const first = append('name="languages" lang="en"');
 		append(

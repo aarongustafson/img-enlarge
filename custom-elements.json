@@ -32,7 +32,7 @@
 						{
 							"kind": "method",
 							"name": "open",
-							"description": "Open a snapshot of the current collection at this image.",
+							"description": "Initialize pending connected collection members and open a snapshot at this image, preserving each authored image's referrerpolicy and crossorigin before requesting enlarged sources. A viewer opened by the previous viewer's close listener takes precedence over the interrupted opening.",
 							"return": { "type": { "text": "void" } }
 						},
 						{

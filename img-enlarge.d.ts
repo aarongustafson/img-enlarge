@@ -20,6 +20,7 @@ export interface ImgEnlargeErrorDetail {
  * in that order. Authored images stay in light DOM.
  * Explicit src/srcset override enclosing image links; otherwise image links
  * take precedence over inferred responsive candidates and the authored source.
+ * The viewer preserves each authored image's referrerpolicy and crossorigin.
  */
 export class ImgEnlargeElement extends HTMLElement {
 	static readonly observedAttributes: string[];
