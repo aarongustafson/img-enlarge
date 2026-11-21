@@ -251,14 +251,8 @@ async function measurements(page, includeLinks = false) {
 
 function usesButtonSurface(sample) {
 	return typeof sample.selector === 'string'
-		? [
-				'header code',
-				'.demo-section > p',
-				'.demo-section > p code',
-				'button',
-				'button[type="reset"]',
-			].includes(sample.selector)
-		: [0, 4].includes(sample.selector.small);
+		? ['button', 'button[type="reset"]'].includes(sample.selector)
+		: sample.selector.small === 4;
 }
 
 test('pairs refreshed surfaces, native controls, and notes with system colors', async ({
@@ -290,16 +284,19 @@ test('pairs refreshed surfaces, native controls, and notes with system colors', 
 			};
 		});
 	const button = await colors('#button-palette');
-	for (const selector of [
-		'header code',
-		'button[type="submit"]',
-		'button[type="reset"]',
-	]) {
+	for (const selector of ['button[type="submit"]', 'button[type="reset"]']) {
 		const actual = await colors(selector);
 		expect(actual.foreground, selector).toBe(button.foreground);
 		expect(actual.background, selector).toBe(button.background);
 	}
 	const canvas = await colors('#canvas-palette');
+	for (const selector of ['header code', '.demo-section > p code']) {
+		const actual = await colors(selector);
+		expect(actual.foreground, selector).toBe(canvas.foreground);
+		expect(actual.background, selector).toBe(
+			selector === 'header code' ? canvas.background : 'rgba(0, 0, 0, 0)',
+		);
+	}
 	for (const selector of ['.demo-section', '.api-reference', '.demo']) {
 		const actual = await colors(selector);
 		expect(actual.foreground, selector).toBe(canvas.foreground);
