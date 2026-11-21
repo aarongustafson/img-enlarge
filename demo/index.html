@@ -4,10 +4,10 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>&lt;img-enlarge&gt; demo</title>
-		<link rel="stylesheet" href="./styles.css" />
 		<link rel="stylesheet" href="./demo-shell.css" />
+		<link rel="stylesheet" href="./styles.css" />
 	</head>
-	<body data-syntax-theme="github">
+	<body data-demo-page="full" data-syntax-theme="github">
 		<a class="skip-link" href="#main">Skip to examples</a>
 		<header>
 			<p class="eyebrow">Web component / Examples</p>
@@ -35,6 +35,9 @@
 		<main id="main" tabindex="-1">
 			<p
 				id="microlighter-status"
+				data-loading-message="Loading optional code highlighting and Copy controls."
+				data-failure-message="MicroLighter could not load. Code remains readable and selectable; the component loads independently."
+				data-theme-failure-message="Code highlighting and Copy controls are available, but the syntax theme could not load. The component loads independently."
 				class="enhancement-status"
 				role="status"
 				hidden
@@ -65,7 +68,7 @@
     alt="A trail between two green mountains beneath a golden sun."&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<img-enlarge id="basic-image">
 							<img
 								src="./mountains.svg"
@@ -113,7 +116,10 @@
     alt="A red bicycle with a basket beside a pale stone path."&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo collection-thumbnails">
+					<div
+						class="demo collection-thumbnails"
+						data-demo-label="Live example"
+					>
 						<img-enlarge id="mountains" name="landscapes-and-bikes">
 							<figure>
 								<a href="./mountains-large.svg"
@@ -170,7 +176,10 @@
   &lt;img src="./mountains.svg" alt="A trail between green mountains."&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo responsive-comparison">
+					<div
+						class="demo responsive-comparison"
+						data-demo-label="Live example"
+					>
 						<img-enlarge id="responsive-example-auto">
 							<img
 								src="./mountains.svg"
@@ -232,7 +241,7 @@
   &lt;/a&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<img-enlarge id="linked-source">
 							<a href="./mountains-large.svg"
 								><img
@@ -281,7 +290,7 @@
 }</mark>
 &lt;/style&gt;</code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<img-enlarge
 							id="responsive-source"
 							class="responsive-thumbnail"
@@ -326,7 +335,7 @@
   &lt;/picture&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<img-enlarge
 							id="picture-source"
 							class="responsive-thumbnail"
@@ -370,7 +379,7 @@
   &lt;img src="./mountains.svg" alt="A trail between green mountains."&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<img-enlarge
 							id="explicit-source"
 							src="./mountains-large.svg"
@@ -411,7 +420,7 @@
     sizes="192px" alt="A trail between green mountains."&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<img-enlarge
 							id="explicit-responsive-source"
 							class="responsive-thumbnail"
@@ -479,7 +488,7 @@
 }</mark>
 &lt;/style&gt;</code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<img-enlarge
 							id="styled"
 							class="editorial"
@@ -536,7 +545,7 @@
   &lt;img src="./mountains.svg" alt="A trail between green mountains."&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<article class="product-card">
 							<h3>Everyday city bicycle</h3>
 							<p>
@@ -632,7 +641,10 @@
   &lt;img src="./bicycle-basket.svg" alt="A woven basket above the front wheel."&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo collection-thumbnails">
+					<div
+						class="demo collection-thumbnails"
+						data-demo-label="Live example"
+					>
 						<img-enlarge
 							id="grouped"
 							name="details"
@@ -690,7 +702,10 @@
 }</mark>
 &lt;/style&gt;</code></pre>
 					</micro-lighter>
-					<div class="demo collection-thumbnails">
+					<div
+						class="demo collection-thumbnails"
+						data-demo-label="Live example"
+					>
 						<img-enlarge
 							id="hide-disabled-first"
 							class="hide-disabled"
@@ -771,7 +786,11 @@
   <mark>&lt;/img-enlarge&gt;</mark>
 &lt;/div&gt;</code></pre>
 					</micro-lighter>
-					<div class="demo collection-thumbnails" lang="fr-CA">
+					<div
+						class="demo collection-thumbnails"
+						data-demo-label="Live example"
+						lang="fr-CA"
+					>
 						<script
 							type="application/json"
 							data-img-enlarge-config="french"
@@ -849,7 +868,7 @@
     alt="A trail through green mountains."&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
 					</micro-lighter>
-					<div class="demo">
+					<div class="demo" data-demo-label="Live example">
 						<img-enlarge id="failure" src="./missing-image.svg">
 							<img
 								src="./mountains.svg"

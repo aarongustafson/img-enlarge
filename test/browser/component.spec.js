@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
+import { expectNativeFocus } from './demo-fixture.js';
 
 test.beforeEach(async ({ page }) => {
 	await page.route(
@@ -59,6 +60,11 @@ async function serve(page, controls = 'auto', enhanced = true) {
 			page.locator('#mountains .img-enlarge-trigger'),
 		).toBeVisible();
 }
+
+test('demo navigation preserves unclipped native focus', async ({ page }) => {
+	await serve(page);
+	await expectNativeFocus(page.locator('header a').first());
+});
 
 test('opening from a previous viewer’s close callback leaves exactly one modal and restores focus', async ({
 	page,

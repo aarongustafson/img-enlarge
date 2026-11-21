@@ -16,6 +16,13 @@ import { resolve } from 'node:path';
 import { ImgEnlargeElement } from '../img-enlarge.js';
 import { styles } from '../img-enlarge-styles.js';
 
+it('trims block-edge margins inside demo sections', async () => {
+	const css = await readFile('demo/demo-shell.css', 'utf8');
+	expect(css).toMatch(
+		/\.demo-section(?:,\s*\.api-reference)?\s*\{[^}]*\bmargin-trim:\s*block;/,
+	);
+});
+
 let fixture;
 afterEach(async () => {
 	if (fixture) await rm(fixture, { recursive: true, force: true });
