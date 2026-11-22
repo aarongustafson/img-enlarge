@@ -46,12 +46,6 @@ export const styles = /* css */ `
 		pointer-events: auto;
 	}
 
-	.img-enlarge-trigger:focus-visible,
-	.img-enlarge-dialog button:focus-visible {
-		outline: 3px solid Highlight;
-		outline-offset: 3px;
-	}
-
 	.img-enlarge-dialog {
 		box-sizing: border-box;
 		position: fixed;
@@ -182,11 +176,6 @@ export const styles = /* css */ `
 			min-block-size: var(--img-enlarge-control-size, 2.75rem);
 			min-inline-size: var(--img-enlarge-control-size, 2.75rem);
 			cursor: pointer;
-		}
-
-		.img-enlarge-track::scroll-button(*):focus-visible {
-			outline: 3px solid Highlight;
-			outline-offset: 3px;
 		}
 
 		.img-enlarge-dialog[data-controls='css'] .img-enlarge-track[data-single='false']::scroll-button(inline-start) {

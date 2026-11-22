@@ -8,9 +8,9 @@
 		<link rel="stylesheet" href="./styles.css" />
 	</head>
 	<body data-demo-page="full" data-syntax-theme="github">
-		<a class="skip-link" href="#main" lang="en">Skip to examples</a>
+		<a class="skip-link" href="#main">Aller aux exemples</a>
 		<header>
-			<p class="eyebrow" lang="en">Web component / labels-flat</p>
+			<p class="eyebrow">Composant web / Français</p>
 			<h1>&lt;img-enlarge&gt;</h1>
 			<p class="lede">
 				Une configuration pour toute la page.
@@ -18,28 +18,26 @@
 					href="https://github.com/aarongustafson/img-enlarge/blob/main/README.md"
 					>README</a
 				>
-				· <a href="./index.html" lang="en">All examples</a>
 			</p>
-			<nav aria-label="Component resources" lang="en">
+			<nav aria-label="Ressources du composant">
 				<a
 					href="https://github.com/aarongustafson/img-enlarge/blob/main/README.md"
-					>Read the README</a
+					>Lire le README</a
 				>
 				<a href="https://github.com/aarongustafson/img-enlarge"
-					>View on GitHub</a
+					>Voir sur GitHub</a
 				>
-				<a href="./index.html">All examples</a>
-				<a href="./esm.html">esm.sh example</a>
-				<a href="./unpkg.html">unpkg example</a>
+				<a href="./index.html">Tous les exemples</a>
+				<a href="./esm.html">Exemple esm.sh</a>
+				<a href="./unpkg.html">Exemple unpkg</a>
 			</nav>
 		</header>
 		<main id="main" tabindex="-1">
 			<p
 				id="microlighter-status"
-				data-loading-message="Loading optional code highlighting and Copy controls."
-				data-failure-message="MicroLighter could not load. Code remains readable and selectable; the component loads independently."
-				data-theme-failure-message="Code highlighting and Copy controls are available, but the syntax theme could not load. The component loads independently."
-				lang="en"
+				data-loading-message="Chargement de la coloration du code et des boutons de copie."
+				data-failure-message="MicroLighter n’a pas pu se charger. Le code reste lisible et sélectionnable ; le composant se charge indépendamment."
+				data-theme-failure-message="La coloration du code et les boutons de copie sont disponibles, mais le thème n’a pas pu se charger. Le composant se charge indépendamment."
 				class="enhancement-status"
 				role="status"
 				hidden
@@ -48,13 +46,10 @@
 			<section class="demo-section">
 				<h2>Définir les libellés une seule fois</h2>
 				<p>
-					Une page dans une seule langue peut utiliser un objet
-					simple, sans codes de langue. Le document indique sa langue
-					avec
-					<code>&lt;html lang="fr"&gt;</code>. Chaque image du groupe
-					utilise les mêmes libellés, sans attributs de traduction
-					répétés. Sans JavaScript, les images et leurs liens restent
-					disponibles.
+					Placez les libellés dans un bloc JSON pour les partager sur
+					toute la page. Ouvrez l’une des images pour essayer les
+					boutons en français. Sans JavaScript, les images et leurs
+					liens restent disponibles.
 				</p>
 				<div class="code-demo-pair">
 					<micro-lighter
@@ -97,7 +92,7 @@
 					</micro-lighter>
 					<div
 						class="demo collection-thumbnails"
-						data-demo-label="Live example"
+						data-demo-label="Exemple interactif"
 					>
 						<script type="application/json" data-img-enlarge-config>
 							{

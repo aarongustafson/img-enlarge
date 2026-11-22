@@ -9,7 +9,7 @@
 				{
 					"kind": "class",
 					"name": "ImgEnlargeElement",
-					"description": "Enhance one authored image with a modal enlarged view. Unnamed images open independently; matching nonempty name attributes opt into galleries. Preserve light-DOM image links and responsive sources. Shared labels come from inline script[type='application/json'][data-img-enlarge-config]: an empty marker sets page defaults; a value targets that gallery name. Each script accepts a flat label object or language dictionaries selected by inherited lang with regional-to-base fallback. Merge per key: individual label attributes, named configuration, page configuration, built-in English defaults. Valid unchanged JSON is cached per script. Refresh after editing configuration or inherited language. Duplicate scripts for an applicable scope or invalid configuration emit a configuration error and preserve authored content. No availability probes or enlargement downloads run before opening. Known thumbnail dimensions reserve the enlarged image box while loading or failed. Failed images stay visible with native browser fallback rendering, error status, Retry, and Close. Successful images use their own proportions.",
+					"description": "Enhance one or more authored images with a modal enlarged view. Each unnamed wrapper is an isolated gallery; matching nonempty name attributes connect individual wrappers or groups in image document order. Each img, including the fallback img in picture, gets an independently eligible opener; nested wrappers own their images. Wrapper source and caption attributes apply to all its images. Preserve light-DOM image links and responsive sources. Shared labels come from inline script[type='application/json'][data-img-enlarge-config]: an empty marker sets page defaults; a value targets that gallery name. Each script accepts a flat label object or language dictionaries selected by inherited lang with regional-to-base fallback. Merge per key: individual label attributes, named configuration, page configuration, built-in English defaults. Valid unchanged JSON is cached per script. Refresh after editing membership, configuration or inherited language; preserve focus on the same image's replacement opener. Duplicate scripts for an applicable scope or invalid configuration emit a configuration error and preserve authored content. No availability probes or enlargement downloads run before opening. Known thumbnail dimensions reserve the enlarged image box while loading or failed. Failed images stay visible with native browser fallback rendering, error status, Retry, and Close. Successful images use their own proportions.",
 					"tagName": "img-enlarge",
 					"customElement": true,
 					"superclass": { "name": "HTMLElement" },
@@ -21,7 +21,7 @@
 							"type": {
 								"text": "'idle' | 'inactive' | 'ready' | 'open' | 'error'"
 							},
-							"description": "Connection, responsive eligibility, configuration, and modal state; inactive means enlargement adds no space or no larger inferred responsive candidate remains. Image loading errors do not close the modal."
+							"description": "Connection, responsive eligibility, configuration, and modal state; ready means at least one authored image offers enlargement, inactive means none do. Eligibility is evaluated independently for each image. Image loading errors do not close the modal."
 						},
 						{
 							"kind": "method",
@@ -32,25 +32,25 @@
 						{
 							"kind": "method",
 							"name": "open",
-							"description": "Initialize pending connected collection members and open a snapshot at this image, preserving each authored image's referrerpolicy and crossorigin before requesting enlarged sources. A viewer opened by the previous viewer's close listener takes precedence over the interrupted opening.",
+							"description": "Open at the first authored image when that image is eligible. Clicking an image's generated opener instead starts at that image. Initialize pending connected collection members and preserve each authored image's referrerpolicy and crossorigin before requesting enlarged sources. A viewer opened by the previous viewer's close listener takes precedence over the interrupted opening.",
 							"return": { "type": { "text": "void" } }
 						},
 						{
 							"kind": "method",
 							"name": "close",
-							"description": "Close and remove the viewer, restoring opener focus when connected.",
+							"description": "Close the modal and restore opener focus immediately when connected. Running CSS opacity, transform, display, or overlay exit transitions may retain an inert, aria-hidden visual until completion or cancellation; refreshing or disconnecting removes it immediately.",
 							"return": { "type": { "text": "void" } }
 						},
 						{
 							"kind": "method",
 							"name": "next",
-							"description": "Navigate forward without wrapping.",
+							"description": "Navigate forward without wrapping. Honor authored track scroll-behavior: smooth when scrollend is supported and reduced motion is not requested; keep selection events stable during the scroll.",
 							"return": { "type": { "text": "void" } }
 						},
 						{
 							"kind": "method",
 							"name": "previous",
-							"description": "Navigate backward without wrapping.",
+							"description": "Navigate backward without wrapping. Honor authored track scroll-behavior: smooth when scrollend is supported and reduced motion is not requested; keep selection events stable during the scroll.",
 							"return": { "type": { "text": "void" } }
 						}
 					],
@@ -78,7 +78,7 @@
 						{
 							"name": "name",
 							"type": { "text": "string" },
-							"description": "Case-sensitive gallery name. Matching nonempty names opt into a shared collection in document order; absent or empty opens only this image. Also selects a matching data-img-enlarge-config label script.",
+							"description": "Case-sensitive gallery name. Matching nonempty names connect all images from individual wrappers or groups in image document order. Absent or empty keeps the wrapper's images in an isolated gallery. Nested images belong to their closest img-enlarge wrapper. Also selects a matching data-img-enlarge-config label script.",
 							"default": "\"\""
 						},
 						{
@@ -91,13 +91,13 @@
 							"name": "force",
 							"type": { "text": "boolean" },
 							"default": "false",
-							"description": "Always offer enlargement, even when the displayed image is as large as the styled viewer would show it or the largest inferred responsive candidate is already selected."
+							"description": "Always offer enlargement for every authored image, even when it is as large as the styled viewer would show it or the largest inferred responsive candidate is already selected."
 						},
 						{
 							"name": "open-label",
 							"type": { "text": "string" },
 							"default": "\"Enlarge image\"",
-							"description": "Nonempty opener text."
+							"description": "Nonempty opener text. In a multi-image wrapper, a nonempty authored image alt is appended to distinguish its opener."
 						},
 						{
 							"name": "dialog-label",
@@ -154,21 +154,21 @@
 							"type": {
 								"text": "CustomEvent<ImgEnlargeChangeDetail>"
 							},
-							"description": "Bubbles from the opener after opening; detail has zero-based index, total, and the current component."
+							"description": "Bubbles from the opener wrapper after opening; detail has zero-based index, total, element (the selected image's wrapper), and image (the original authored HTMLImageElement)."
 						},
 						{
 							"name": "img-enlarge:change",
 							"type": {
 								"text": "CustomEvent<ImgEnlargeChangeDetail>"
 							},
-							"description": "Bubbles from the opener on the initial selection and each changed selection."
+							"description": "Bubbles from the opener wrapper on the initial selection and each changed selection; detail has zero-based index, total, element (the selected image's wrapper), and image (the original authored HTMLImageElement)."
 						},
 						{
 							"name": "img-enlarge:close",
 							"type": {
 								"text": "CustomEvent<Record<string, never>>"
 							},
-							"description": "Bubbles from the opener after teardown, with empty detail."
+							"description": "Bubbles from the opener after logical teardown and focus restoration, with empty detail. An inert CSS-animated exit visual may remain until its transitions finish."
 						},
 						{
 							"name": "img-enlarge:error",
