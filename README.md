@@ -7,26 +7,60 @@
 [![Type definitions](https://img.shields.io/npm/types/@aarongustafson/img-enlarge)](https://github.com/aarongustafson/img-enlarge/blob/main/img-enlarge.d.ts)
 
 `<img-enlarge>` adds an Enlarge button when an image has room to appear larger.
-The button opens a dialog that fits the browser window. You can use it with one
-image or connect several images into a gallery.
+The button opens a viewport-fitting dialog for one image or a gallery.
+Authored images, responsive sources, and links remain usable without JavaScript.
+The component uses light DOM, includes default styles, and has no runtime dependencies.
 
-The original image and any link around it still work without JavaScript.
-The component keeps your `<picture>`, `srcset`, and `sizes` in place and has no
-runtime dependencies. It doesn’t add automatic slideshows or zoom/pan gestures.
+## Demos
 
-[Try the examples](demo/index.html).
+- [Live demo](https://aarongustafson.github.io/img-enlarge/demo/) ([Source](./demo/index.html)): sources, captions, galleries, labels, and styling.
+- [Unpkg demo](https://aarongustafson.github.io/img-enlarge/demo/unpkg.html) ([Source](./demo/unpkg.html)).
+- [ESM.sh demo](https://aarongustafson.github.io/img-enlarge/demo/esm.html) ([Source](./demo/esm.html)).
+- [Single-language configuration](https://aarongustafson.github.io/img-enlarge/demo/labels-flat.html) ([Source](./demo/labels-flat.html)).
 
-## Load the component
+## Installation
 
-For a plain HTML page, load the registration module from unpkg and wrap one
-image in `<img-enlarge>`:
+```sh
+npm install @aarongustafson/img-enlarge
+```
+
+Import the registration module:
+
+```js
+import '@aarongustafson/img-enlarge/define.js';
+```
+
+For a plain HTML page, use a module script:
 
 ```html
 <script
   type="module"
   src="https://unpkg.com/@aarongustafson/img-enlarge/define.js?module"
 ></script>
+```
 
+The package root exports the class without registering it:
+
+```js
+import { ImgEnlargeElement } from '@aarongustafson/img-enlarge';
+
+customElements.define('img-enlarge', ImgEnlargeElement);
+```
+
+Keep the `img-enlarge` tag name; gallery discovery relies on it.
+`define.js` also exports `defineImgEnlarge()`, a guarded registration helper
+that returns `false` without a browser registry. TypeScript declarations are bundled.
+
+Default CSS is inserted once per document; no separate stylesheet import is needed.
+If your Content Security Policy requires a style nonce, set `nonce` on the first
+component before it connects. A blocked stylesheet emits a configuration error
+and leaves the authored content unenhanced.
+
+## Usage
+
+Wrap one or more images, including images inside `<picture>`, figures, or links:
+
+```html
 <img-enlarge>
   <img
     src="./trail.jpg"
@@ -37,331 +71,68 @@ image in `<img-enlarge>`:
 </img-enlarge>
 ```
 
-Use the Enlarge button to try the viewer; press Escape or Close to return to
-the image. If the viewer can’t show the image larger, the component leaves it
-alone. See [responsive enhancement](#responsive-enhancement) for `force` and
-responsive-image behavior.
+Put image links inside the component, not around it. Image clicks still follow
+the link; the separate Enlarge button opens the viewer. Nested components own
+their own images.
 
-The component includes its default styles and inserts one shared stylesheet
-when the first instance connects. You don’t need a separate CSS import.
+## Behavior
 
-For a project that uses npm, install the package:
+- **Eligibility:** each image gets a button when the styled viewer can paint it
+  more than one CSS pixel wider or taller. Resizing and image loading update
+  eligibility. Inferred responsive sources also need a larger candidate available.
+  Use `force` to bypass these checks, including for art-directed enlargements.
+  A focused opener remains until focus leaves; an open viewer keeps its opener.
+- **Sources:** keep thumbnail `src`, `srcset`, and `sizes` on the authored image.
+  Viewer sources use component `src`/`srcset` overrides, then an enclosing image
+  link, then inferred responsive candidates, then `currentSrc`/`src`.
+  Ambiguous candidates use the fallback source. Image links need an image MIME
+  `type` or a recognized image-file extension; use explicit `src` otherwise.
+  A non-image `type` prevents link inference.
+  Viewer `sizes` describes the enlarged image, not the thumbnail.
+  URLs accept HTTP(S), blob, and image data URLs. The viewer preserves authored
+  `referrerpolicy` and `crossorigin`.
+- **Galleries:** an unnamed wrapper opens only its own images. Matching,
+  nonempty, case-sensitive `name` values connect wrappers and groups in image
+  document order. Invalid or hidden/inert members are excluded. Each opening
+  snapshots the collection; clicking an opener starts at that image.
+- **Navigation:** Previous/Next, Left/Right keys, and scrolling navigate without
+  wrapping. Arrow directions follow the opener’s text direction. `controls="auto"`
+  uses native CSS scroll buttons when supported, otherwise HTML buttons.
+  `controls="buttons"` forces HTML buttons. Single-image viewers have no arrows.
+- **Captions:** alternative text comes from the original image’s `alt`.
+  Captions come from `caption`, then an enclosing figure’s `figcaption`; an empty
+  `caption` suppresses the fallback. Captions are plain text, separate from alt
+  text, and retain their source language.
+- **Loading and errors:** only visited enlarged images load. Visible status
+  reports position, loading, and errors. Failed images retain their reserved
+  space and native fallback rendering; Retry and Close remain available.
+  Invalid configuration leaves authored content unenhanced and emits an error.
+- **Focus and closing:** Close receives initial focus; the native modal contains
+  keyboard focus. Escape or Close dismisses it and restores the original opener.
+  Backdrop clicks don’t dismiss it. Only one viewer is open per document.
+  If you remove or hide the opener, manage the next useful focus location.
 
-```sh
-npm install @aarongustafson/img-enlarge
-```
+## Attributes
 
-Then import the registration module through your build tool:
+Configure the component through HTML attributes. Source and caption overrides
+apply to every image in a wrapper; use separate named wrappers for per-image overrides.
 
-```js
-import '@aarongustafson/img-enlarge/define.js';
-```
+| Attribute  | Default                                                     | Purpose                                                                                                          |
+| ---------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `src`      | Inferred source                                             | Enlargement URL; overrides image-link and responsive inference.                                                  |
+| `srcset`   | Inferred candidates                                         | Enlargement candidates. Without component `src`, fallback is the authored `currentSrc`/`src`, not an image link. |
+| `sizes`    | Measured for inferred candidates; browser default otherwise | Viewer image sizing hint. Doesn’t change the thumbnail’s `sizes`.                                                |
+| `caption`  | Enclosing `figcaption`                                      | Plain-text caption override; an empty value hides the caption.                                                   |
+| `name`     | Isolated wrapper                                            | Connect wrappers with the same nonempty name.                                                                    |
+| `controls` | `auto`                                                      | `auto` or `buttons`.                                                                                             |
+| `force`    | Absent (`false`)                                            | Boolean attribute that keeps enlargement available regardless of size or source hints.                           |
 
-This import registers the element and includes TypeScript definitions for the
-element and its events. To register it yourself, import the class from the
-package root or `img-enlarge.js` instead:
-
-```js
-import { ImgEnlargeElement } from '@aarongustafson/img-enlarge';
-
-customElements.define('img-enlarge', ImgEnlargeElement);
-```
-
-Use the `img-enlarge` tag name; collection discovery relies on it.
-`define.js` also exports `defineImgEnlarge()`, which returns `false` without a
-browser registry and otherwise registers the tag if needed.
-
-To work from a local checkout, serve the repository and load `./define.js`
-instead of the CDN URL. See the [esm.sh](demo/esm.html) and
-[unpkg](demo/unpkg.html) examples for complete browser imports.
-
-If your Content Security Policy requires a style nonce, put the allowed nonce
-on the first component before it connects: `<img-enlarge nonce="your-nonce">`.
-The shared style element copies that nonce. A blocked stylesheet produces a
-configuration error and leaves the authored image unchanged.
-
-## Image sources and captions
-
-Each component accepts one or more authored `<img>` elements, including images
-inside `<picture>`, links, or figures. Put image links **inside** the component, not around it.
-Clicking the image still follows its link; the separate Enlarge button opens
-the dialog at that image. Images inside nested `<img-enlarge>` elements belong
-only to their closest wrapper, not to the parent.
-
-### Keep responsive attributes on the image
-
-**Put `src`, `srcset`, and `sizes` on the authored `<img>` as usual.**
-You don’t need to repeat them on `<img-enlarge>`. This keeps the thumbnail
-responsive before JavaScript runs and when enhancement isn’t available.
-
-```html
-<img-enlarge>
-  <img
-    src="./trail-small.jpg"
-    srcset="./trail-small.jpg 400w, ./trail-large.jpg 1600w"
-    sizes="(max-width: 40rem) 100vw, 20rem"
-    alt="A trail between green mountains."
-  />
-</img-enlarge>
-```
-
-Without explicit enlargement overrides or an identified image link, the viewer
-can reuse those candidates. It offers automatic enlargement only when a
-larger candidate than `currentSrc` remains available and the viewer has room.
-The browser chooses a candidate for the enlarged image; the component doesn’t
-always request the largest file.
-
-Width descriptors (`400w`, `1200w`) provide candidate widths directly. Density
-descriptors (`1x`, `2x`) are converted to width hints using the loaded image’s
-density-corrected natural width. A `<picture>` can supply candidates from the
-branch identified by `currentSrc`; candidates from different crops aren’t mixed.
-If the selected branch is ambiguous, dimensions aren’t available, or descriptors
-can’t be interpreted, the viewer keeps the `currentSrc` fallback instead.
-
-For inferred candidates, the viewer calculates `sizes` from its contained
-image’s painted width and updates it when that image’s layout changes. It
-doesn’t copy the original `sizes`, which describes the thumbnail’s layout.
-The original image, `<picture>`, `srcset`, and `sizes` aren’t changed.
-
-### Use an existing image link
-
-When you link an image to a larger file, the link supplies the enlargement URL
-instead of inferred responsive candidates.
-There’s no need to repeat the link URL on the component:
-
-```html
-<img-enlarge>
-  <figure>
-    <a href="./trail-large.jpg">
-      <img src="./trail-small.jpg" alt="A trail between green mountains." />
-    </a>
-    <figcaption>The trail on a clear afternoon.</figcaption>
-  </figure>
-</img-enlarge>
-```
-
-- An image MIME hint, such as `type="image/jpeg"`, identifies an image link,
-  including extensionless URLs. A nonempty, non-image `type` prevents inference.
-- Without a MIME hint, the URL’s pathname must end in `.apng`, `.avif`, `.bmp`,
-  `.gif`, `.ico`, `.jfif`, `.jpg`, `.jpeg`, `.png`, `.svg`, or `.webp`.
-  Matching is case-insensitive; query strings and fragments don’t affect it.
-
-Other links keep the existing image-source behavior; the component doesn’t
-fetch a URL to discover its content type. Use explicit `src` for ambiguous URLs.
-Image clicks still follow the authored link.
-
-### Optional: separate enlargement sources
-
-Only put `src` or `srcset` on `<img-enlarge>` when you want to override the
-normal image-link and responsive-source inference. For example, a thumbnail
-might use 400px and 800px files while the viewer uses separate 1600px and
-3200px files:
-
-```html
-<img-enlarge
-  src="./trail-enlarged.jpg"
-  srcset="./trail-enlarged.jpg 1600w, ./trail-enlarged-large.jpg 3200w"
->
-  <img
-    src="./trail-thumbnail.jpg"
-    srcset="./trail-thumbnail.jpg 400w, ./trail-thumbnail-large.jpg 800w"
-    sizes="(max-width: 40rem) 100vw, 20rem"
-    alt="A trail winding between two green mountains."
-  />
-</img-enlarge>
-```
-
-The source and sizing attributes on `<img>` configure only the authored thumbnail. The
-attributes on `<img-enlarge>` configure only the generated viewer image;
-those separate enlargement files aren’t requested until their slide is visited.
-This override isn’t needed when both views can use the authored image’s candidates.
-
-Component-level `src`, `srcset`, and `sizes` are shared overrides for every
-image in the wrapper. Use individual wrappers when images need different
-enlargement overrides; a shared `name` can still connect them into one gallery.
-
-Explicit component `src` and `srcset` take precedence over image links and
-candidate inference. The fallback URL is the authored image’s `currentSrc`,
-then its `src`. Explicit component `srcset` uses that fallback when no component
-`src` is provided, not the link URL.
-
-A component-level `sizes` overrides the viewer’s measured `sizes` for inferred
-candidates. With explicit enlargement sources, it describes the viewer’s
-layout, not the thumbnail’s; the browser’s default applies when it’s absent.
-It doesn’t change the authored image’s `sizes`.
-
-All resolved enlargement URLs use the same validation: HTTP(S), blob, and image
-data URLs only. Relative URLs resolve against the component’s base URL.
-
-The viewer snapshots each authored image’s `referrerpolicy` and `crossorigin`,
-including empty values, and applies them before requesting enlarged sources.
-Explicit enlargement URLs don’t relax those request policies.
-
-### Alternative text and captions
-
-Alternative text comes from the original image’s `alt`. A caption comes from
-the component’s `caption`, then the image’s enclosing figure’s `figcaption`.
-An empty `caption` suppresses that fallback. Captions are copied as plain text,
-not HTML, and alt text isn’t displayed as a caption. Supply meaningful alt text
-and captions for your content.
-
-A component-level `caption` applies to every image in that wrapper. Without
-it, each image uses its own enclosing figure’s caption. Use individual wrappers
-when you need different `caption` overrides.
-
-The snapshot keeps each image’s and caption’s inherited `lang`, including an
-explicit empty value. A `caption` attribute uses the component’s language;
-copied `figcaption` text uses the caption element’s language. These languages
-don’t change the opener’s control labels.
-
-### Loading and recovery
-
-Only visited enlarged images load. Loading and errors appear in visible status
-text. A failed image stays visible in its reserved box so the browser can show
-its broken-image indicator and alternative text; it also gets a retry button.
-Close remains available. The placeholder uses the original image’s natural
-aspect ratio, or its rendered/authored dimensions when natural dimensions
-aren’t available, within the viewer’s normal size limits. Supplying `width`
-and `height` on the original `<img>` helps reserve space before it loads.
-Without known dimensions, the browser supplies its normal fallback sizing.
-A successfully loaded enlargement uses its own proportions, which may differ
-from the thumbnail. Retrying uses the same URL and normal browser caching rules.
-A new opening rereads sources, image links, and captions. After editing a
-link’s `href` or `type`, call
-`refresh()` to reevaluate whether its image should get an enlarge button.
-If a later responsive source fails after an image has loaded, the viewer updates
-the error status and offers Retry again.
-The component doesn’t request enlarged files or check their availability before
-you open them.
-
-## Responsive enhancement
-
-The component measures each image and a hidden, inert copy of the styled viewer
-layout. It adds the button only when the viewer would paint the image more than
-one CSS pixel wider or taller, allowing for rounding at equal sizes. Measuring
-doesn’t fetch the enlarged source. The estimate uses the original image’s aspect
-ratio; use `force` when an art-directed enlarged source has a different ratio.
-
-Image and container resizing, image loading, and viewport changes update the
-decision.
-A focused button stays available until focus leaves; an open viewer
-also keeps its opener. This avoids dropping focus during a layout change.
-Each image has its own eligibility decision and Enlarge button.
-`state === 'ready'` means at least one image is eligible;
-`state === 'inactive'` means none are eligible and no buttons are added.
-Refreshing a focused opener or an open viewer moves focus to the replacement
-opener for the same original image, which stays available until focus leaves.
-For inferred responsive sources, the button also stays absent when the largest
-candidate is already selected or no candidate is wider than the displayed image.
-This decision uses resource hints, not a guarantee of sharpness or extra detail.
-Browser caching, display density, and resource-selection choices can affect it.
-The image still belongs to its authored collection and can appear when another
-image opens that collection.
-
-Use the boolean `force` attribute to keep enlargement available for every image
-in the wrapper, including when the largest responsive candidate is already selected:
-
-```html
-<img-enlarge force>
-  <img src="./map.jpg" alt="A trail map with the station at its lower edge." />
-</img-enlarge>
-```
-
-Changing image markup or changing dialog-only styling without a resize requires
-`refresh()` to reevaluate eligibility. Style the documented classes rather than
-relying on `:modal`-only layout rules: the sizing copy is a non-modal dialog.
-Where the Popover API is available, this hidden copy enters the top layer so
-transformed ancestors don’t change its viewport-based size. Older browsers use
-the non-modal in-page measurement.
-
-## Collections and controls
-
-Wrap several images together for an isolated gallery, or give wrappers the same
-`name` to connect their images:
-
-- Without a `name`, or with `name=""`, a component opens only its own authored
-  images, in image document order. Separate unnamed wrappers don’t connect.
-- Matching, nonempty, case-sensitive names connect all images from individual
-  wrappers or multi-image groups anywhere in the document, in image document
-  order, not just adjacent components.
-
-```html
-<img-enlarge name="details">
-  <img src="./detail-one.jpg" alt="The bicycle’s front basket." />
-</img-enlarge>
-<img-enlarge name="details">
-  <img src="./detail-two.jpg" alt="The bicycle’s rear wheel." />
-</img-enlarge>
-<img-enlarge>
-  <img src="./map.jpg" alt="A map showing the trail from the station." />
-</img-enlarge>
-```
-
-The two bicycle images share a viewer. The map opens on its own.
-See the [unnamed gallery example](demo/index.html#unnamed-gallery-example)
-for several images in one wrapper, including an image inside `<picture>`.
-Each eligible image has its own opener. Activating it starts at that image;
-Escape or Close returns focus to the clicked opener, even after navigation.
-
-### How a collection is chosen
-
-- Components with invalid configuration or `[hidden]`/`[inert]` ancestors
-  don’t join collections.
-- Each opening takes a snapshot in image document order. Close and reopen to
-  pick up source and caption changes for existing images. After adding, removing,
-  or reordering images inside a wrapper, call its `refresh()` method to rebuild
-  its image membership and openers before opening again. Connected wrappers
-  still awaiting their setup microtask are initialized before the snapshot.
-- Opening another viewer closes the current one. If a close-event listener opens
-  a viewer, that callback’s viewer remains active; the interrupted opening doesn’t
-  create a second dialog.
-
-### Navigation controls
-
-Previous/Next and Left/Right keys navigate without wrapping. Arrow directions
-follow the opener’s computed text direction. Touch and trackpad scrolling use
-the same scroll-snapping collection. There are no navigation controls for a
-single-image collection.
-
-`controls="auto"` uses CSS `::scroll-button()` controls when the required
-selectors and alternative-text syntax are available.
-Otherwise, JavaScript creates native buttons. `controls="buttons"` forces that
-fallback, including when you need to avoid a browser’s native carousel behavior.
-Only one control set is exposed at a time.
-
-Fallback buttons use `aria-disabled` at collection boundaries so keyboard focus
-stays on the control after navigation. Boundary activation does nothing. Native
-CSS controls use the browser’s disabled behavior.
-Both paths use `GrayText` for disabled icons and borders against `ButtonFace`,
-with a dashed border as an additional non-color cue.
-
-Set `--disabled-button-visibility: hidden` to hide unavailable arrows instead.
-The default is `visible`, and the same property controls both navigation paths:
-
-```css
-.hide-disabled {
-  --disabled-button-visibility: hidden;
-}
-```
-
-Add `class="hide-disabled"` to each component that can open the collection.
-Visibility preserves the control’s space. The focused arrow stays visible until
-focus leaves, avoiding a disappearing focus indicator at a boundary.
-See the [JavaScript controls](demo/index.html#javascript-controls-example) and
-[hidden disabled arrows](demo/index.html#hide-disabled-example) demos.
-
-Feature detection checks syntax support, not assistive-technology compatibility.
-Test both paths in your supported browser and assistive-technology combinations.
+Changes to these attributes or label attributes refresh the component in a
+microtask and close its open viewer.
 
 ## Labels and localization
 
-You can change every generated label, including loading and error messages.
-Set labels once for the page with an inline
-`<script type="application/json" data-img-enlarge-config>`, target a named
-gallery with `data-img-enlarge-config="gallery-name"`, or override them on
-individual components. The marker is functional, not a demo-only attribute;
-no script ID is required. Each label also has an attribute you can set on an
-individual component:
+Every generated label can be rewritten or translated:
 
 | Attribute        | Default                          |
 | ---------------- | -------------------------------- |
@@ -375,434 +146,84 @@ individual component:
 | `retry-label`    | `Try again`                      |
 | `position-label` | `{current} of {total}`           |
 
-Labels must contain non-whitespace text. `position-label` must contain both
-placeholders; positions shown to readers are one-based. Labels and captions
-are inserted as text, never interpreted as HTML. The component that opens the
-gallery supplies its labels, inherited language, and text direction for the
-whole dialog. See the fully translated
-[French example](demo/index.html#localized).
+Labels must contain non-whitespace text; `position-label` requires both
+placeholders. Displayed positions are one-based. Multi-image openers append
+the original image’s nonempty `alt` to `open-label`; single-image openers use
+the label alone.
 
-### One language: a flat object
+For shared labels, use an inline `script[type="application/json"]` with
+`data-img-enlarge-config`. An empty marker sets page defaults; a nonempty
+marker targets the matching gallery name. Use one script per scope, containing
+either a flat label object or language-keyed dictionaries. Partial dictionaries
+are supported; unsupported keys or invalid configuration emit an error.
 
-A single-language page doesn’t need language-code keys. Put the labels directly
-in the configuration object:
+Precedence is **component attributes → named configuration → page configuration
+→ built-in English labels**, merged per label. Language dictionaries use the
+nearest authored `lang`, with more specific tags falling back to their parent
+language (`fr-CA` to `fr`). The opener supplies labels, language, and direction
+for the whole viewer; navigation doesn’t switch them.
 
-```html
-<script type="application/json" data-img-enlarge-config>
-  {
-    "open-label": "Agrandir l’image",
-    "dialog-label": "Images agrandies",
-    "close-label": "Fermer",
-    "previous-label": "Image précédente",
-    "next-label": "Image suivante",
-    "loading-label": "Chargement de l’image",
-    "error-label": "Impossible de charger l’image.",
-    "retry-label": "Réessayer",
-    "position-label": "{current} sur {total}"
-  }
-</script>
-```
+Call `refresh()` after editing shared JSON or inherited language. When serializing
+dynamic JSON into a script, escape `<` as `\u003c`. See the
+[label examples](https://aarongustafson.github.io/img-enlarge/demo/#localization-example)
+for runnable configurations.
 
-These labels apply to every component in the document, regardless of its
-language. Still identify the content’s language in HTML, such as
-`<html lang="fr">`. Configuration doesn’t set or translate document language,
-captions, or alternative text. See the [single-language demo](demo/labels-flat.html).
+## Properties and methods
 
-### Multiple languages: language-keyed objects
+| Member                  | Behavior                                                                                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state`                 | Read-only `idle`, `inactive` (no eligible images), `ready` (any image eligible), `open`, or configuration `error`.                                                                          |
+| `open()`                | Takes no arguments. Opens at this wrapper’s first authored image only when that image is eligible. Otherwise does nothing, even if another image is eligible. Does nothing if already open. |
+| `close()`               | Closes the modal and restores opener focus immediately. Authored CSS exit visuals are removed when their transitions finish.                                                                |
+| `next()` / `previous()` | Navigates an open viewer; stops at collection boundaries.                                                                                                                                   |
+| `refresh()`             | Closes the viewer and rebuilds image membership, openers, labels, and language. Preserves focus by original image identity when refreshing a focused opener or open viewer.                 |
 
-Use the same configuration marker, but nest dictionaries under language codes:
+Call `refresh()` after adding, removing, or reordering images, editing an image
+link’s `href`/`type`, or changing dialog-only layout without a resize.
+Membership isn’t automatically observed. Existing images’ sources and captions
+are reread on reopening.
 
-```html
-<script type="application/json" data-img-enlarge-config>
-  {
-    "fr": {
-      "open-label": "Agrandir l’image",
-      "dialog-label": "Images agrandies",
-      "close-label": "Fermer",
-      "previous-label": "Image précédente",
-      "next-label": "Image suivante",
-      "loading-label": "Chargement de l’image",
-      "error-label": "Impossible de charger l’image.",
-      "retry-label": "Réessayer",
-      "position-label": "{current} sur {total}"
-    },
-    "fr-CA": {
-      "open-label": "Agrandir la photo"
-    }
-  }
-</script>
+Disconnecting a component closes its viewer, removes generated controls and
+pending exit visuals, and cleans up listeners, observers, and scheduled work.
+Reconnecting initializes it again. The shared stylesheet remains for other instances.
 
-<div lang="fr-CA">
-  <img-enlarge name="photos">
-    <img src="./trail.jpg" alt="Un sentier entre les montagnes." />
-  </img-enlarge>
-  <img-enlarge name="photos">
-    <img src="./bicycle.jpg" alt="Un vélo rouge avec un panier." />
-  </img-enlarge>
-</div>
-```
+## Events
 
-The component uses its nearest authored `lang`, not browser language
-preferences. Language tags are canonicalized using `Intl.getCanonicalLocales`;
-matching is case-insensitive. More specific dictionaries override less specific
-ones one label at a time within each configuration: `fr-CA` falls back to `fr`.
-An unmatched or empty language contributes no labels from that script’s
-language dictionaries; lower-priority configuration and built-in labels still apply.
+Events bubble from the component that opened the viewer:
 
-Precedence, from highest to lowest:
-
-1. The individual component’s label attributes.
-2. The configuration whose marker matches the opener’s `name`.
-3. The page configuration, with an empty marker.
-4. Built-in English labels.
-
-Resolve language fallbacks within each scope, then merge scopes one key at a
-time. A named configuration can override a page label without repeating the
-rest of its dictionary. Both scopes accept flat or language-keyed objects.
-
-The opener supplies the entire collection’s controls, even when another image
-has different labels or a different language. Navigation doesn’t switch the
-viewer’s language. A wrapper’s `open-label` describes its thumbnails’ action. For a multi-image
-wrapper, each opener’s accessible name combines that label with its original
-image’s `alt` when the alt text is nonempty. Single-image wrappers keep the
-label alone, unchanged.
-
-### Named gallery overrides
-
-An empty `data-img-enlarge-config` sets page defaults. A nonempty value must
-match a gallery’s `name` exactly, including case:
-
-```html
-<script type="application/json" data-img-enlarge-config>
-  { "close-label": "Close" }
-</script>
-<script type="application/json" data-img-enlarge-config="products">
-  { "dialog-label": "Product photographs" }
-</script>
-
-<img-enlarge name="products">
-  <img src="./bicycle.jpg" alt="A red bicycle with a basket." />
-</img-enlarge>
-```
-
-The product viewer gets its dialog label from the named configuration and its
-close label from the page configuration. Other galleries and unnamed images
-use only page defaults and their own attribute overrides. The marker scopes
-labels; it doesn’t configure image sources, styling, or gallery membership.
-
-### Setup, updates, and invalid configuration
-
-Use at most one page script and one script for each gallery name. Within each
-script, use either a flat object or language dictionaries—not both. Put configuration
-before the registration script or before connecting components. A shared site
-layout can include the same configuration on every page. The component doesn’t
-fetch an external configuration file, execute its contents, or expose a new
-global variable.
-
-Valid, unchanged JSON is parsed and validated once per script. Components
-resolve applicable page and named scripts when connecting or refreshing.
-After changing the JSON, its scope marker, or
-an inherited `lang`, call `refresh()` on affected components; this closes any
-viewer they opened. Existing controls don’t relabel themselves in response to
-script edits. Removing a named script and refreshing restores page defaults;
-removing the page script also leaves attribute overrides and built-in defaults.
-
-Label dictionaries can be partial. Every supplied label must use a supported
-name and contain non-whitespace text; `position-label` must contain `{current}`
-and `{total}`. All dictionaries are validated, including unused languages.
-Malformed JSON, unsupported keys, invalid language codes, duplicate canonical
-language codes, wrong value types, an incorrect script type, or duplicate scripts
-for an applicable scope produce an
-`img-enlarge:error` with `phase: "configuration"` and leave the authored image
-unenhanced. Invalid or duplicate configuration for a different gallery name
-doesn’t affect this component. Correct the configuration and call `refresh()` to recover.
-
-When generating an inline JSON script from dynamic content, use a serializer
-that escapes `<` as `\u003c` so a value containing a closing script tag cannot
-end the data block.
-
-## Methods, state, and events
-
-Configuration uses the attributes above, plus `src`, `srcset`, `sizes`, `caption`,
-`name`, `controls`, and `force`. Changes to these attributes close an open
-viewer and refresh its trigger in a microtask. After replacing the image markup,
-call `refresh()` explicitly to reread image membership. The component doesn’t
-automatically discover added, removed, or reordered images through mutation
-observation. Image attributes and caption text are reread on
-the next opening. Shared label configuration and inherited language changes
-require `refresh()`.
-
-| Member                  | Behavior                                                                                                                                                                                                        |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `open()`                | Takes no arguments. Open the collection at this wrapper’s first authored image when that image is eligible; otherwise do nothing, even if another image is eligible. Do nothing if already open.                |
-| `close()`               | Close and remove the viewer.                                                                                                                                                                                    |
-| `next()` / `previous()` | Navigate an open viewer; stop at collection boundaries.                                                                                                                                                         |
-| `refresh()`             | Close the viewer and reread image membership, markup, page labels, and inherited language. Restore focus to the replacement opener for the same original image when refreshing a focused opener or open viewer. |
-| `state`                 | Read-only `idle`, `inactive` (no eligible images), `ready` (any image eligible), `open`, or configuration `error`.                                                                                              |
-
-All events bubble from the component that opened the viewer:
-
-| Event                | `detail`                           |
+| Event                | Detail                             |
 | -------------------- | ---------------------------------- |
 | `img-enlarge:open`   | `{ index, total, element, image }` |
 | `img-enlarge:change` | `{ index, total, element, image }` |
 | `img-enlarge:close`  | `{}`                               |
 | `img-enlarge:error`  | `{ error, phase, element }`        |
 
-Event indexes are zero-based positions in the opening’s image snapshot.
-`element` identifies the selected or affected wrapper. For `open` and `change`,
-`image` is the selected original `HTMLImageElement`, not the generated viewer
-image; several images can share the same `element`.
-`phase` is `configuration`, `open`, or `load`. Initial selection emits
-`change` before `open`; later selection changes emit `change` only. Image loading
-errors don’t change the component’s `open` state.
-
-Invalid configuration leaves the authored markup in place and emits an error;
-it doesn’t add a working-looking trigger. Opening errors leave the trigger
-available. Listen for error events if your application needs logging:
-
-```js
-document.addEventListener('img-enlarge:error', ({ detail }) => {
-  console.error(detail.phase, detail.error);
-});
-```
-
-Disconnecting the opener closes its dialog, removes generated controls and their
-positioning anchor, disconnects resize observation, aborts listeners, and cancels
-pending layout and scroll work. Reconnecting reevaluates whether to add a fresh
-trigger. The shared stylesheet stays available for other instances. Only one
-viewer from this package is open per document.
-Inferred-source resize observers also disconnect on closing, retrying, or removal.
-An open viewer keeps its source snapshot, including the selected picture branch;
-close and reopen to pick up a different art-directed branch.
-
-<a id="styling-and-accessibility"></a>
+`index` is zero-based within the opening’s snapshot. `element` identifies the
+selected or affected wrapper; `image` is the original `HTMLImageElement`, not
+the viewer copy. Error `phase` is `configuration`, `open`, or `load`.
+Initial selection emits `change` before `open`. Loading errors don’t change
+the viewer’s `open` state.
 
 ## Styling
 
-Both the generated trigger and dialog stay inside the component’s light DOM.
-The modal enters the browser’s top layer while open. Use scoped class selectors
-and custom properties for styling; these are **not** shadow-DOM `::part()` hooks.
-Defaults live in the `img-enlarge` cascade layer, so unlayered author rules can
-override them even when the component injects its stylesheet later.
+Generated controls and the dialog remain inside the opener’s light DOM; these
+are class selectors, not shadow-DOM `::part()` hooks. Default rules use the
+`img-enlarge` cascade layer, so unlayered author styles override them.
+Apply styling to every wrapper that can open a gallery: the dialog inherits
+from its opener, not the currently viewed image.
 
-### Generated HTML
-
-The following is the complete host structure for an open, left-to-right,
-two-image collection using JavaScript navigation buttons. The first image has
-loaded; the second hasn’t been visited. The first figure is authored markup.
-The positioning span and dialog are generated siblings, not wrappers around
-that markup. The other component in the collection remains elsewhere in the
-document; only the opening wrapper contains the dialog. This example uses
-single-image wrappers, so its opener’s accessible name is the label alone.
-A multi-image wrapper keeps all its authored images in place and adds a separate
-positioning span and trigger for each eligible image. Those opener names combine
-the wrapper’s `open-label` with each original image’s nonempty `alt`.
-
-URLs, labels, and inline positioning values are examples. The component measures
-the positioning span at runtime; don’t copy those values into your styles.
-
-```html
-<img-enlarge class="product-images" name="products" controls="buttons">
-  <figure>
-    <a href="./large-one.jpg">
-      <img
-        src="./small-one.jpg"
-        width="320"
-        height="180"
-        alt="A red bicycle with a basket."
-      />
-    </a>
-    <figcaption>The city bicycle.</figcaption>
-  </figure>
-
-  <span
-    class="img-enlarge-anchor"
-    style="left: 0px; top: 0px; width: 320px; height: 180px"
-  >
-    <button
-      type="button"
-      class="img-enlarge-trigger"
-      data-action="open"
-      aria-label="Enlarge image"
-      aria-haspopup="dialog"
-    >
-      <span aria-hidden="true">⤢</span>
-    </button>
-  </span>
-
-  <dialog
-    class="img-enlarge-dialog"
-    aria-label="Enlarged images"
-    lang="en"
-    dir="ltr"
-    data-controls="buttons"
-    open
-  >
-    <button
-      type="button"
-      class="img-enlarge-close"
-      data-action="close"
-      aria-label="Close"
-      autofocus
-    >
-      <span aria-hidden="true">×</span>
-    </button>
-
-    <div
-      class="img-enlarge-track"
-      data-track=""
-      data-previous-label="Previous image"
-      data-next-label="Next image"
-      data-single="false"
-    >
-      <figure class="img-enlarge-slide" aria-hidden="false">
-        <img
-          class="img-enlarge-image"
-          alt="A red bicycle with a basket."
-          decoding="async"
-          width="320"
-          height="180"
-          src="https://example.com/large-one.jpg"
-        />
-        <figcaption class="img-enlarge-caption">The city bicycle.</figcaption>
-      </figure>
-      <figure class="img-enlarge-slide" aria-hidden="true"></figure>
-    </div>
-
-    <div class="img-enlarge-navigation">
-      <button
-        type="button"
-        class="img-enlarge-previous"
-        data-action="previous"
-        aria-label="Previous image"
-        aria-disabled="true"
-      >
-        <span aria-hidden="true">←</span>
-      </button>
-      <button
-        type="button"
-        class="img-enlarge-next"
-        data-action="next"
-        aria-label="Next image"
-        aria-disabled="false"
-      >
-        <span aria-hidden="true">→</span>
-      </button>
-    </div>
-
-    <p class="img-enlarge-status" role="status" aria-atomic="true">1 of 2</p>
-    <button type="button" class="img-enlarge-retry" data-action="retry" hidden>
-      Try again
-    </button>
-  </dialog>
-</img-enlarge>
-```
-
-The component also inserts one shared `<style data-img-enlarge>` into the
-document’s head, outside this tree. It contains the
-[bundled stylesheet](./img-enlarge-styles.js) and copies the first component’s
-style nonce when provided. It stays in place after components disconnect.
-The modal backdrop is the dialog’s `::backdrop` pseudo-element, not an HTML node.
-
-#### Native CSS navigation
-
-The native control path uses the same HTML tree, with
-`data-controls="css"` on the dialog and `hidden` on the existing
-`.img-enlarge-navigation` wrapper. Its two real buttons remain in the DOM but
-aren’t displayed or exposed as controls. The browser instead generates
-`::scroll-button(inline-start)` and `::scroll-button(inline-end)` on
-`.img-enlarge-track`; these pseudo-elements aren’t additional `<button>` nodes.
-Their accessible names come from the track’s `data-previous-label` and
-`data-next-label` values.
-
-Style both paths separately when changing navigation buttons:
-
-```css
-.product-images .img-enlarge-navigation button {
-  border-radius: 50%;
-}
-
-@supports selector(::scroll-button(inline-start)) {
-  .product-images .img-enlarge-track::scroll-button(*) {
-    border-radius: 50%;
-  }
-}
-```
-
-Native arrows use `:disabled`; JavaScript buttons use `[aria-disabled='true']`,
-not the HTML `disabled` attribute. Both honor
-`--disabled-button-visibility`. In right-to-left layouts the arrow glyphs swap
-directions; the Previous/Next actions and class names stay the same. Preserve
-the native arrows’ generated content and accessible alternatives when styling.
-
-#### Loading, errors, and collection changes
-
-The structure changes as follows:
-
-- **Before enhancement or while inactive:** only authored content is present.
-  The component adds a positioning span and trigger for each eligible image; it adds the
-  dialog only when opened. Layout measurement also briefly creates a hidden,
-  inert, non-modal copy of the dialog, then removes it.
-- **Unvisited image:** its slide is an empty figure, as shown above. Visiting
-  it inserts an `.img-enlarge-image` followed by an `.img-enlarge-caption`.
-  Previously visited slides retain those children.
-- **Offscreen slide:** `aria-hidden="true"` changes to `"false"` on the selected
-  figure. This isn’t the `hidden` attribute: offscreen figures keep their layout
-  boxes for scrolling.
-- **No caption:** the generated `figcaption` is empty and has `hidden`.
-- **Dimensions:** when known, the original image’s dimensions supply generated
-  `width` and `height` attributes. Loading and failed images also carry an
-  internal `--_img-enlarge-image-aspect-ratio` hint in their `style` attribute.
-  The hint is removed after loading so the enlarged file’s actual proportions
-  take over.
-- **Responsive source:** the generated image also receives `srcset` and `sizes`
-  when applicable.
-- **Loading:** the image and caption are inserted immediately, Retry remains
-  hidden, and the same status paragraph reads, for example,
-  `1 of 2. Loading image`.
-- **Load error:** the image stays visible with its reserved space and native
-  browser fallback rendering. Its caption remains in place, the
-  status reads `1 of 2. The image could not be loaded.`, and Retry loses
-  `hidden`. Retry replaces the failed image and caption, hides the retry
-  button, and returns the status to loading. Close remains available.
-- **Collection boundary:** the previous button’s `aria-disabled` is `"true"` at
-  the start; the next button’s is `"true"` at the end. Otherwise each is `"false"`.
-  Native pseudo-elements reflect the boundary through `:disabled`.
-- **Single-image collection:** there is one slide, the track has
-  `data-single="true"`, and the navigation wrapper has `hidden` in either mode.
-  Native arrow pseudo-elements aren’t generated.
-- **Closing:** the modal closes and focus returns immediately. The dialog is
-  removed after any running CSS exit transitions on its opacity, transform,
-  display, or overlay finish. Until then, it is inert and hidden from assistive
-  technology. Each trigger remains while eligible. Refreshing or disconnecting
-  also removes pending exit visuals, positioning spans, and replaced triggers.
-
-The component doesn’t add loading/error classes or reflect its `state` property
-as an HTML attribute. Use the documented classes and custom properties for
-presentation. Leave generated ARIA attributes, `hidden`, `data-*` wiring, and
-the anchor’s measured geometry under component control.
-
-For the example above, `.product-images > figure img` selects the authored
-thumbnail, while `.product-images .img-enlarge-image` selects the viewer image.
-A broad `.product-images img` rule affects both. Apply your styling class to
-every component that can open a collection, because the dialog inherits styles
-and custom properties from its opener, not the image currently being viewed.
-
-### Classes and custom properties
-
-| Class                                         | Styled part                                                     |
-| --------------------------------------------- | --------------------------------------------------------------- |
-| `.img-enlarge-trigger`                        | Enlarge icon button, positioned relative to the original image. |
-| `.img-enlarge-dialog`                         | Dialog layout, surface, and `::backdrop`.                       |
-| `.img-enlarge-close`                          | Close icon button.                                              |
-| `.img-enlarge-track`                          | Scroll container and native `::scroll-button()` controls.       |
-| `.img-enlarge-slide`                          | Each image/caption figure.                                      |
-| `.img-enlarge-image`                          | Enlarged image.                                                 |
-| `.img-enlarge-caption`                        | Plain-text caption.                                             |
-| `.img-enlarge-navigation`                     | Fallback navigation wrapper.                                    |
-| `.img-enlarge-previous` / `.img-enlarge-next` | Fallback arrow buttons.                                         |
-| `.img-enlarge-status` / `.img-enlarge-retry`  | Status and retry control.                                       |
+| Class                                         | Styled part                                                         |
+| --------------------------------------------- | ------------------------------------------------------------------- |
+| `.img-enlarge-trigger`                        | Enlarge button.                                                     |
+| `.img-enlarge-dialog`                         | Dialog layout, surface, and `::backdrop`.                           |
+| `.img-enlarge-close`                          | Close button.                                                       |
+| `.img-enlarge-track`                          | Scroll container and native scroll buttons.                         |
+| `.img-enlarge-slide`                          | Image/caption figure; the selected slide has `aria-hidden="false"`. |
+| `.img-enlarge-image`                          | Enlarged image, distinct from authored thumbnails.                  |
+| `.img-enlarge-caption`                        | Caption.                                                            |
+| `.img-enlarge-navigation`                     | HTML navigation wrapper.                                            |
+| `.img-enlarge-previous` / `.img-enlarge-next` | HTML arrow buttons.                                                 |
+| `.img-enlarge-status` / `.img-enlarge-retry`  | Status and retry control.                                           |
 
 | Custom property                           | Default                         |
 | ----------------------------------------- | ------------------------------- |
@@ -818,90 +239,40 @@ and custom properties from its opener, not the image currently being viewed.
 | `--img-enlarge-caption-gap`               | `0.75rem`                       |
 | `--disabled-button-visibility`            | `visible`                       |
 
-The default enlarge icon (`⤢`) sits at the image’s block-start/inline-end. Close
-(`×`) sits at the dialog’s block-start/inline-end; Previous/Next sit at its inline
-edges. The icons are hidden from assistive technology; the label attributes
-provide their accessible names in both control paths.
+Style HTML arrows and native `.img-enlarge-track::scroll-button()` controls
+separately; guard pseudo-element rules with `@supports`. HTML buttons use
+`[aria-disabled="true"]`; native arrows use `:disabled`. Set
+`--disabled-button-visibility: hidden` to hide unavailable arrows. A focused
+HTML arrow remains visible until focus leaves.
 
-Full-width gallery slides have a `0.5rem` gap so a neighboring panel doesn’t
-peek into view when scroll positions round at fractional widths. Adjust
-`--img-enlarge-slide-gap` to change this separation; keep a small positive gap.
-This is separate from the dialog’s row gap and the caption’s spacing.
+Keep controls reachable, focus indicators visible, and enough dialog padding
+for the overlaid buttons. Don’t change the positioning anchor’s geometry,
+generated ARIA or wiring attributes, or hide offscreen slides with `display: none`.
+Keep a positive slide gap. Style dialog layout without relying solely on `:modal`,
+because eligibility uses a hidden, inert, non-modal sizing copy.
 
-For example, change the slide and caption spacing and dialog padding:
+Defaults use paired system colors, forced-colors rules, and no animation.
+Optional smooth track scrolling applies to navigation where `scrollend` is supported;
+opening and reduced-motion navigation remain instant. Disable authored CSS motion
+for reduced-motion preferences. Exit visuals are inert and hidden from assistive
+technology after logical closing.
 
-```css
-.product-images {
-  --img-enlarge-dialog-padding: 4rem;
-  --img-enlarge-caption-gap: 1.5rem;
-  --img-enlarge-slide-gap: 1rem;
-}
-
-.product-images .img-enlarge-caption {
-  text-align: start;
-}
-```
-
-See the [layout customization](demo/index.html#styling-example) and
-[grouped product gallery](demo/index.html#product-example) demos. Keep controls
-reachable and leave enough padding for the overlaid buttons. Don’t hide offscreen
-slides with `display: none`; scrolling needs their layout boxes. The generated
-`.img-enlarge-anchor` owns image-relative geometry and isn’t a layout hook.
-
-### Optional motion
-
-Set `scroll-behavior: smooth` on `.img-enlarge-track` to animate keyboard and
-HTML-button navigation in browsers with `scrollend` support. Opening at the
-chosen image stays instant. Reduced-motion preferences also keep navigation
-instant; disable your CSS transitions and animations for that preference.
-
-The [styled gallery](demo/index.html#gallery-styling-example) uses
-`@starting-style` for entry and CSS transitions for exit. Browsers without
-`overlay` transitions use a spread shadow as a visual backdrop and keep the
-closed dialog rendered while it fades. Closing still ends the modal, restores
-focus, and fires the close event immediately. The inert exit visual is removed
-when its transitions finish or are canceled; no fixed JavaScript timer is used.
-
-## Accessibility and browser behavior
-
-The default stylesheet uses paired system colors, browser-default focus outlines, scroll snap,
-and no animated transitions or smooth scrolling. It includes forced-colors
-styling. `--_img-enlarge-css-controls` and
-`--_img-enlarge-image-aspect-ratio` are internal readiness and sizing hints,
-not customization APIs. Override the image class’s `aspect-ratio` in author CSS
-if you need different sizing behavior.
-
-Close receives initial focus. Native modal behavior contains keyboard focus;
-Escape and Close dismiss the viewer. Focus returns to the opener that started
-the viewer if it’s still connected, not to the currently viewed image’s opener.
-Offscreen slides are hidden from the accessibility tree, and a polite
-status reports position, loading, and failures. The dialog doesn’t dismiss on
-backdrop clicks.
-
-Multi-image wrappers add each original image’s nonempty `alt` to the opener’s
-`open-label`; single-image wrappers keep their existing names. Provide meaningful
-alt text and distinct labels where controls would otherwise be hard to distinguish.
-If your application removes the opener or hides
-its container while the dialog is open, manage the next useful focus location.
-Automated browser checks aren’t a substitute for assistive-technology review.
+See the [styling demos](https://aarongustafson.github.io/img-enlarge/demo/#styling-examples)
+and [bundled stylesheet](./img-enlarge-styles.js). Browser feature detection
+doesn’t establish assistive-technology compatibility; test your supported combinations.
 
 ## Development
 
 ```sh
 npm ci
 npm run test:run
+npm run test:types
 npm run test:browser
 npm run lint
 ```
 
-Browser tests run in Chromium, Firefox, and WebKit. Install missing engines with
-`npx playwright install chromium firefox webkit`. Run `npm run test:types` to
-check the published TypeScript imports. Demo images are included in this
-repository, so the local examples don’t depend on remote image services.
-
-The retained `version` script updates and stages the versioned esm.sh demo.
-`postversion` pushes tags. Don’t run release commands until you intend to
-version and publish the package.
+Browser tests cover Chromium, Firefox, and WebKit. Install missing engines with
+`npx playwright install chromium firefox webkit`.
 
 ## License
 
