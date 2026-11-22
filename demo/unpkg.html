@@ -13,10 +13,9 @@
 			<p class="eyebrow">Web component / unpkg</p>
 			<h1>&lt;img-enlarge&gt;</h1>
 			<p class="lede">
-				This example imports the automatic registration module. It
-				requires an npm publication. Use the
-				<a href="./index.html">local demo</a> for the unpublished draft.
-				Read the <a href="../README.md">README</a> for the API.
+				Load the component from <code>unpkg</code>. See the
+				<a href="../README.md">README</a> for installation and API
+				details.
 			</p>
 			<nav aria-label="Component resources">
 				<a
@@ -43,6 +42,12 @@
 
 			<section class="demo-section">
 				<h2>Import automatic registration</h2>
+				<p>
+					Import <code>define.js</code> to register
+					<code>img-enlarge</code> automatically. You don’t need a
+					separate <code>customElements.define()</code> call. If the
+					CDN can’t load, the image remains visible.
+				</p>
 				<div class="code-demo-pair">
 					<micro-lighter
 						class="code-panel"

@@ -24,6 +24,108 @@ function append(
 }
 
 describe('img-enlarge', () => {
+	it.each(['', 'name=""'])(
+		'isolates an unnamed multi-image gallery: %s',
+		async (attributes) => {
+			const first = append(
+				attributes,
+				'<img src="/one.svg" alt="One"><picture><source srcset="/two.webp" type="image/webp"><img src="/two.svg" alt="Two"></picture>',
+			);
+			append(
+				'',
+				'<img src="/other.svg" alt="Other"><img src="/another.svg" alt="Another">',
+			);
+			const opened = vi.fn();
+			first.addEventListener('img-enlarge:open', opened);
+			await settle();
+			const images = [...first.querySelectorAll('img')];
+			const triggers = first.querySelectorAll('.img-enlarge-trigger');
+			expect(triggers).toHaveLength(2);
+			triggers[1].click();
+			expect(opened.mock.lastCall[0].detail).toMatchObject({
+				index: 1,
+				total: 2,
+				element: first,
+				image: images[1],
+			});
+			first.previous();
+			expect(first.querySelector('dialog img').alt).toBe('One');
+			first.close();
+			expect(document.activeElement).toBe(triggers[1]);
+			first.open();
+			expect(opened.mock.lastCall[0].detail.index).toBe(0);
+		},
+	);
+
+	it('joins explicitly named groups in image order without double-counting nested wrappers or hidden images', async () => {
+		const first = append(
+			'name="joined"',
+			'<img src="/one.svg" alt="One"><img-enlarge force name="joined"><img src="/two.svg" alt="Two"></img-enlarge><img src="/three.svg" alt="Three"><figure hidden><img src="/hidden.svg" alt="Hidden"></figure>',
+		);
+		append('name="joined"', '<img src="/four.svg" alt="Four">');
+		append('', '<img src="/isolated.svg" alt="Isolated">');
+		await settle();
+		const changes = vi.fn();
+		first.addEventListener('img-enlarge:change', changes);
+		first.open();
+		expect(first.querySelectorAll('.img-enlarge-slide')).toHaveLength(4);
+		for (let index = 0; index < 4; index++) {
+			expect(changes.mock.lastCall[0].detail.image.alt).toBe(
+				['One', 'Two', 'Three', 'Four'][index],
+			);
+			first.next();
+		}
+	});
+
+	it('refreshes multi-image membership and restores the same image opener after reordering, then cleans up on disconnect', async () => {
+		const element = append(
+			'',
+			'<img src="/one.svg" alt="One"><img src="/two.svg" alt="Two">',
+		);
+		await settle();
+		const original = element.querySelectorAll('img')[1];
+		const stale = element.querySelectorAll('.img-enlarge-trigger')[1];
+		stale.click();
+		const added = document.createElement('img');
+		added.src = '/added.svg';
+		added.alt = 'Added';
+		element.prepend(added);
+		element.refresh();
+		expect(element.querySelector('dialog')).toBeNull();
+		expect(element.querySelectorAll('.img-enlarge-trigger')).toHaveLength(
+			3,
+		);
+		const replacement = element.querySelectorAll('.img-enlarge-trigger')[2];
+		expect(document.activeElement).toBe(replacement);
+		stale.click();
+		expect(element.querySelector('dialog')).toBeNull();
+		const opened = vi.fn();
+		element.addEventListener('img-enlarge:open', opened);
+		replacement.click();
+		expect(opened.mock.lastCall[0].detail.image).toBe(original);
+		element.remove();
+		expect(element.querySelectorAll('.img-enlarge-anchor')).toHaveLength(0);
+		document.body.append(element);
+		await settle();
+		expect(element.querySelectorAll('.img-enlarge-trigger')).toHaveLength(
+			3,
+		);
+	});
+
+	it('reports unsafe sources in any gallery image without replacing authored content', async () => {
+		const element = append(
+			'',
+			'<img src="/safe.svg" alt="Safe"><img src="javascript:alert(1)" alt="Unsafe">',
+		);
+		const errors = vi.fn();
+		element.addEventListener('img-enlarge:error', errors);
+		await settle();
+		element.open();
+		expect(errors.mock.lastCall[0].detail.phase).toBe('open');
+		expect(element.querySelector('dialog')).toBeNull();
+		expect(element.querySelectorAll('img')).toHaveLength(2);
+	});
+
 	it.each(['same opener', 'another opener'])(
 		'does not orphan a viewer when a close callback opens the %s',
 		async (target) => {

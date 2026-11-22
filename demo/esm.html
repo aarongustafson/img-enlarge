@@ -13,11 +13,9 @@
 			<p class="eyebrow">Web component / esm</p>
 			<h1>&lt;img-enlarge&gt;</h1>
 			<p class="lede">
-				This page loads the component class from <code>esm.sh</code> and
-				registers it manually. It requires the package to be published.
-				For the unpublished draft, use the
-				<a href="./index.html">local demo</a>. Read the
-				<a href="../README.md">README</a> for the API.
+				Load the component from <code>esm.sh</code>. See the
+				<a href="../README.md">README</a> for installation and API
+				details.
 			</p>
 			<nav aria-label="Component resources">
 				<a
@@ -45,6 +43,12 @@
 
 			<section class="demo-section">
 				<h2>Import and register the class</h2>
+				<p>
+					This import gives you the class without registering it. Use
+					<code>customElements.define()</code> to make
+					<code>img-enlarge</code> available on the page. If the CDN
+					can’t load, the image remains visible.
+				</p>
 				<div class="code-demo-pair">
 					<micro-lighter
 						class="code-panel"

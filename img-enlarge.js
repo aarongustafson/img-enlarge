@@ -13,7 +13,7 @@ const defaultLabels = {
 	'position-label': '{current} of {total}',
 };
 
-/** Enhance an authored image without changing its link or responsive sources. */
+/** Enhance authored images without changing their links or responsive sources. */
 export class ImgEnlargeElement extends BaseElement {
 	static observedAttributes = [
 		'src',
@@ -30,13 +30,12 @@ export class ImgEnlargeElement extends BaseElement {
 		super();
 		this._state = 'idle';
 		this._pending = false;
-		this._trigger = null;
+		this._entries = [];
 		this._viewer = null;
-		this._anchor = null;
+		this._closingDialogs = new Set();
 		this._layoutFrame = null;
 		this._layoutAbort = null;
 		this._resizeObserver = null;
-		this._eligible = false;
 	}
 
 	get state() {
@@ -50,9 +49,8 @@ export class ImgEnlargeElement extends BaseElement {
 	disconnectedCallback() {
 		this._stopLayout();
 		this.close();
-		this._anchor?.remove();
-		this._anchor = null;
-		this._trigger = null;
+		this._clearClosingDialogs();
+		this._clearEntries();
 		this._state = 'idle';
 	}
 
@@ -70,16 +68,28 @@ export class ImgEnlargeElement extends BaseElement {
 		});
 	}
 
-	_image() {
+	_images() {
 		const images = [...this.querySelectorAll('img')].filter(
 			(image) =>
 				image.closest('img-enlarge') === this &&
 				!image.closest('.img-enlarge-dialog'),
 		);
-		if (images.length !== 1) {
-			throw new Error('img-enlarge requires exactly one authored image.');
+		if (!images.length) {
+			throw new Error(
+				'img-enlarge requires at least one authored image.',
+			);
 		}
-		return images[0];
+		return images;
+	}
+
+	_clearEntries() {
+		for (const { anchor } of this._entries) anchor.remove();
+		this._entries = [];
+	}
+
+	_clearClosingDialogs() {
+		for (const dialog of this._closingDialogs) dialog.remove();
+		this._closingDialogs.clear();
 	}
 
 	static _validateLabels(labels) {
@@ -193,16 +203,14 @@ export class ImgEnlargeElement extends BaseElement {
 		this._pending = false;
 		this._stopLayout();
 		this.close();
-		const restoreFocus =
-			this._trigger !== null &&
-			this.ownerDocument.activeElement === this._trigger;
-		this._anchor?.remove();
-		this._anchor = null;
-		this._trigger = null;
-		this._eligible = false;
+		this._clearClosingDialogs();
+		const restoreImage = this._entries.find(
+			({ trigger }) => this.ownerDocument.activeElement === trigger,
+		)?.image;
+		this._clearEntries();
 		if (!this.isConnected) return;
 		try {
-			const image = this._image();
+			const images = this._images();
 			ImgEnlargeElement._installStyles(this.ownerDocument, this.nonce);
 			if (this.closest('a, button, label')) {
 				throw new Error(
@@ -220,20 +228,31 @@ export class ImgEnlargeElement extends BaseElement {
 					'img-enlarge requires the native modal dialog API.',
 				);
 			}
-			const trigger = this._button('open', this._labels['open-label']);
-			trigger.className = 'img-enlarge-trigger';
-			trigger.setAttribute('aria-haspopup', 'dialog');
-			trigger.addEventListener('click', () => this.open());
-			const anchor = this.ownerDocument.createElement('span');
-			anchor.className = 'img-enlarge-anchor';
-			anchor.append(trigger);
-			this._anchor = anchor;
-			this._trigger = trigger;
-			this._observeLayout(image);
-			this._syncLayout(restoreFocus);
-			if (restoreFocus && trigger.isConnected)
-				trigger.focus({ preventScroll: true });
+			this._entries = images.map((image) => {
+				const label = this._labels['open-label'];
+				const trigger = this._button(
+					'open',
+					images.length > 1 && image.alt.trim()
+						? `${label}: ${image.alt}`
+						: label,
+				);
+				trigger.className = 'img-enlarge-trigger';
+				trigger.setAttribute('aria-haspopup', 'dialog');
+				const anchor = this.ownerDocument.createElement('span');
+				anchor.className = 'img-enlarge-anchor';
+				anchor.append(trigger);
+				return { image, trigger, anchor, eligible: false };
+			});
+			this._observeLayout();
+			this._syncLayout(restoreImage);
+			const replacement = this._entries.find(
+				({ image }) => image === restoreImage,
+			)?.trigger;
+			if (replacement?.isConnected)
+				replacement.focus({ preventScroll: true });
 		} catch (error) {
+			this._stopLayout();
+			this._clearEntries();
 			this._state = 'error';
 			this._error(error, 'configuration');
 		}
@@ -279,23 +298,29 @@ export class ImgEnlargeElement extends BaseElement {
 		}
 	}
 
-	_observeLayout(image) {
+	_observeLayout() {
 		const window = this.ownerDocument.defaultView;
 		const abort = new window.AbortController();
 		this._layoutAbort = abort;
 		const schedule = () => this._scheduleLayout();
 		this._resizeObserver = new window.ResizeObserver(schedule);
 		this._resizeObserver.observe(this);
-		this._resizeObserver.observe(image);
 		window.addEventListener('resize', schedule, { signal: abort.signal });
 		window.visualViewport?.addEventListener('resize', schedule, {
 			signal: abort.signal,
 		});
-		image.addEventListener('load', schedule, { signal: abort.signal });
-		image.addEventListener('error', schedule, { signal: abort.signal });
-		this._trigger.addEventListener('blur', schedule, {
-			signal: abort.signal,
-		});
+		for (const entry of this._entries) {
+			const { image, trigger } = entry;
+			this._resizeObserver.observe(image);
+			trigger.addEventListener('click', () => this._open(entry), {
+				signal: abort.signal,
+			});
+			image.addEventListener('load', schedule, { signal: abort.signal });
+			image.addEventListener('error', schedule, { signal: abort.signal });
+			trigger.addEventListener('blur', schedule, {
+				signal: abort.signal,
+			});
+		}
 	}
 
 	_stopLayout() {
@@ -316,14 +341,13 @@ export class ImgEnlargeElement extends BaseElement {
 		this._layoutFrame =
 			this.ownerDocument.defaultView.requestAnimationFrame(() => {
 				this._layoutFrame = null;
-				if (this.isConnected && this._trigger) this._syncLayout();
+				if (this.isConnected && this._entries.length)
+					this._syncLayout();
 			});
 	}
 
-	_syncLayout(retainEligibility = false) {
+	_syncLayout(restoreImage) {
 		try {
-			const image = this._image();
-			const rect = image.getBoundingClientRect();
 			const host = this.getBoundingClientRect();
 			const style = this.ownerDocument.defaultView.getComputedStyle(this);
 			// offsetWidth/offsetHeight round fractional grid and flex layouts.
@@ -353,26 +377,36 @@ export class ImgEnlargeElement extends BaseElement {
 				]);
 			const scaleX = width ? host.width / width : 1;
 			const scaleY = height ? host.height / height : 1;
-			Object.assign(this._anchor.style, {
-				left: `${(rect.left - host.left) / (scaleX || 1) - this.clientLeft + this.scrollLeft}px`,
-				top: `${(rect.top - host.top) / (scaleY || 1) - this.clientTop + this.scrollTop}px`,
-				width: `${rect.width / (scaleX || 1)}px`,
-				height: `${rect.height / (scaleY || 1)}px`,
-			});
-			this._eligible =
-				this.hasAttribute('force') ||
-				retainEligibility ||
-				Boolean(this._viewer) ||
-				this.ownerDocument.activeElement === this._trigger ||
-				this._canEnlarge(image, rect);
-			if (this._eligible) {
-				if (!this._anchor.isConnected) this.append(this._anchor);
-			} else this._anchor.remove();
+			for (const entry of this._entries) {
+				const { image, anchor, trigger } = entry;
+				const rect = image.getBoundingClientRect();
+				Object.assign(anchor.style, {
+					left: `${(rect.left - host.left) / (scaleX || 1) - this.clientLeft + this.scrollLeft}px`,
+					top: `${(rect.top - host.top) / (scaleY || 1) - this.clientTop + this.scrollTop}px`,
+					width: `${rect.width / (scaleX || 1)}px`,
+					height: `${rect.height / (scaleY || 1)}px`,
+				});
+				const hidden = image.closest('[hidden], [inert]');
+				entry.eligible =
+					image.isConnected &&
+					image.closest('img-enlarge') === this &&
+					(!hidden || hidden === this.closest('[hidden], [inert]')) &&
+					(this.hasAttribute('force') ||
+						image === restoreImage ||
+						this._viewer?.opener === trigger ||
+						this.ownerDocument.activeElement === trigger ||
+						this._canEnlarge(image, rect));
+				if (entry.eligible) {
+					if (!anchor.isConnected) this.append(anchor);
+				} else anchor.remove();
+			}
 			if (!this._viewer)
-				this._state = this._eligible ? 'ready' : 'inactive';
+				this._state = this._entries.some(({ eligible }) => eligible)
+					? 'ready'
+					: 'inactive';
 		} catch (error) {
 			this._stopLayout();
-			this._anchor?.remove();
+			this._clearEntries();
 			this._state = 'error';
 			this._error(error, 'configuration');
 		}
@@ -435,19 +469,37 @@ export class ImgEnlargeElement extends BaseElement {
 	_collection() {
 		if (this.closest('[hidden], [inert]')) return [];
 		const name = this.getAttribute('name') ?? '';
-		if (!name) return [this];
-		return [...this.ownerDocument.querySelectorAll('img-enlarge')].filter(
-			(element) => {
+		const elements = name
+			? [...this.ownerDocument.querySelectorAll('img-enlarge')]
+			: [this];
+		return elements
+			.flatMap((element) => {
 				if (
 					!(element instanceof ImgEnlargeElement) ||
 					element.closest('[hidden], [inert]') ||
-					element.getAttribute('name') !== name
+					(name && element.getAttribute('name') !== name)
 				)
-					return false;
-				if (!element._trigger && element._pending) element.refresh();
-				return element._trigger && element.state !== 'error';
-			},
-		);
+					return [];
+				if (!element._entries.length && element._pending)
+					element.refresh();
+				if (element.state === 'error') return [];
+				return element._entries
+					.filter(
+						({ image }) =>
+							image.isConnected &&
+							image.closest('img-enlarge') === element &&
+							!image.closest('[hidden], [inert]'),
+					)
+					.map(({ image }) => ({ element, image }));
+			})
+			.sort((a, b) => {
+				if (a.image === b.image) return 0;
+				return a.image.compareDocumentPosition(b.image) &
+					this.ownerDocument.defaultView.Node
+						.DOCUMENT_POSITION_FOLLOWING
+					? -1
+					: 1;
+			});
 	}
 
 	static _candidates(text, baseURI) {
@@ -574,8 +626,7 @@ export class ImgEnlargeElement extends BaseElement {
 		);
 	}
 
-	static _source(element) {
-		const image = element._image();
+	static _source(element, image) {
 		const linked = element._linkedSource(image);
 		const responsive = linked ? null : element._responsive(image);
 		const source =
@@ -597,6 +648,7 @@ export class ImgEnlargeElement extends BaseElement {
 		const dimensions = width && height ? { width, height } : null;
 		return {
 			element,
+			image,
 			src: url.href,
 			srcset: element.getAttribute('srcset') ?? responsive?.srcset,
 			sizes: element.getAttribute('sizes'),
@@ -631,13 +683,17 @@ export class ImgEnlargeElement extends BaseElement {
 	/** Open a collection snapshot, preserving authored image request policies. */
 	open() {
 		if (!this.isConnected || this._viewer) return;
-		if (!this._trigger) this.refresh();
-		if (!this._trigger || !this._eligible) return;
+		if (!this._entries.length) this.refresh();
+		if (this._entries[0]) this._open(this._entries[0]);
+	}
+
+	_open(entry) {
+		if (!this.isConnected || this._viewer || !entry.eligible) return;
 		try {
-			const items = this._collection().map((element) =>
-				ImgEnlargeElement._source(element),
+			const items = this._collection().map(({ element, image }) =>
+				ImgEnlargeElement._source(element, image),
 			);
-			const index = items.findIndex((item) => item.element === this);
+			const index = items.findIndex((item) => item.image === entry.image);
 			if (index < 0)
 				throw new Error(
 					'A hidden or inert image cannot open a collection.',
@@ -649,7 +705,7 @@ export class ImgEnlargeElement extends BaseElement {
 				!this.isConnected
 			)
 				return;
-			this._createViewer(items, index);
+			this._createViewer(items, index, entry.trigger);
 			activeViewers.set(this.ownerDocument, this);
 			this._viewer.dialog.showModal();
 			this._state = 'open';
@@ -732,13 +788,14 @@ export class ImgEnlargeElement extends BaseElement {
 		};
 	}
 
-	_createViewer(items, index) {
+	_createViewer(items, index, opener) {
 		const frame = this._frame(items);
 		const { dialog, close, track, slides, status, retry, previous, next } =
 			frame;
 		const abort = new this.ownerDocument.defaultView.AbortController();
 		const { signal } = abort;
 		this._viewer = {
+			opener,
 			dialog,
 			close,
 			track,
@@ -752,6 +809,7 @@ export class ImgEnlargeElement extends BaseElement {
 			abort,
 			loads: new Map(),
 			frame: null,
+			scrollTarget: null,
 		};
 		dialog.addEventListener(
 			'click',
@@ -792,43 +850,79 @@ export class ImgEnlargeElement extends BaseElement {
 		dialog.addEventListener('close', () => this._disposeViewer(), {
 			signal,
 		});
+		const syncSelection = () => {
+			const viewer = this._viewer;
+			if (viewer.frame !== null) return;
+			viewer.frame = this.ownerDocument.defaultView.requestAnimationFrame(
+				() => {
+					viewer.frame = null;
+					if (this._viewer !== viewer) return;
+					if (viewer.scrollTarget !== null) return;
+					const bounds = track.getBoundingClientRect();
+					const edge = dialog.dir === 'rtl' ? 'right' : 'left';
+					const distances = slides.map((slide) =>
+						Math.abs(
+							slide.getBoundingClientRect()[edge] - bounds[edge],
+						),
+					);
+					this._select(
+						distances.indexOf(Math.min(...distances)),
+						false,
+					);
+				},
+			);
+		};
+		track.addEventListener('scroll', syncSelection, {
+			signal,
+			passive: true,
+		});
 		track.addEventListener(
-			'scroll',
+			'scrollend',
 			() => {
-				const viewer = this._viewer;
-				if (viewer.frame !== null) return;
-				viewer.frame =
-					this.ownerDocument.defaultView.requestAnimationFrame(() => {
-						viewer.frame = null;
-						if (this._viewer !== viewer) return;
-						const bounds = track.getBoundingClientRect();
-						const edge = dialog.dir === 'rtl' ? 'right' : 'left';
-						const distances = slides.map((slide) =>
-							Math.abs(
-								slide.getBoundingClientRect()[edge] -
-									bounds[edge],
-							),
-						);
-						this._select(
-							distances.indexOf(Math.min(...distances)),
-							false,
-						);
-					});
+				if (this._viewer?.track !== track) return;
+				this._viewer.scrollTarget = null;
+				syncSelection();
 			},
-			{ signal, passive: true },
+			{ signal },
 		);
 		this.append(dialog);
 	}
 
 	_detail() {
 		const { index, items } = this._viewer;
-		return { index, total: items.length, element: items[index].element };
+		return {
+			index,
+			total: items.length,
+			element: items[index].element,
+			image: items[index].image,
+		};
 	}
 
 	_select(index, scroll) {
 		const viewer = this._viewer;
 		if (!viewer || index < 0 || index >= viewer.items.length) return;
 		const changed = viewer.index !== index || !viewer.loads.has(index);
+		const window = this.ownerDocument.defaultView;
+		const edge = viewer.dialog.dir === 'rtl' ? 'right' : 'left';
+		const smooth =
+			scroll &&
+			viewer.loads.size > 0 &&
+			'onscrollend' in viewer.track &&
+			!window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
+			window.getComputedStyle(viewer.track).scrollBehavior === 'smooth' &&
+			Math.abs(
+				viewer.slides[index].getBoundingClientRect()[edge] -
+					viewer.track.getBoundingClientRect()[edge],
+			) > 1;
+		if (scroll && viewer.scrollTarget !== null && !smooth) {
+			// A no-op scrollIntoView can leave Firefox's earlier smooth scroll running.
+			viewer.track.scrollTo({
+				left: viewer.track.scrollLeft,
+				top: viewer.track.scrollTop,
+				behavior: 'instant',
+			});
+			viewer.scrollTarget = null;
+		}
 		viewer.index = index;
 		viewer.previous.setAttribute('aria-disabled', String(index === 0));
 		viewer.next.setAttribute(
@@ -841,12 +935,14 @@ export class ImgEnlargeElement extends BaseElement {
 		this._load(index);
 		if (this._viewer !== viewer) return;
 		this._updateStatus();
-		if (scroll)
+		if (scroll) {
+			viewer.scrollTarget = smooth ? index : null;
 			viewer.slides[index].scrollIntoView({
 				block: 'nearest',
 				inline: 'start',
-				behavior: 'instant',
+				behavior: smooth ? 'smooth' : 'instant',
 			});
+		}
 		if (changed) this._emit('change', this._detail());
 	}
 
@@ -973,12 +1069,36 @@ export class ImgEnlargeElement extends BaseElement {
 		for (const record of viewer.loads.values()) record.abort.abort();
 		if (viewer.frame !== null)
 			this.ownerDocument.defaultView.cancelAnimationFrame(viewer.frame);
-		viewer.dialog.remove();
+		const window = this.ownerDocument.defaultView;
+		const exits = (viewer.dialog.getAnimations?.() ?? []).filter(
+			(animation) =>
+				window.CSSTransition &&
+				animation instanceof window.CSSTransition &&
+				['opacity', 'transform', 'overlay', 'display'].includes(
+					animation.transitionProperty,
+				) &&
+				animation.playState === 'running',
+		);
+		if (this.isConnected && exits.length) {
+			viewer.dialog.inert = true;
+			viewer.dialog.setAttribute('aria-hidden', 'true');
+			this._closingDialogs.add(viewer.dialog);
+			Promise.all(exits.map((animation) => animation.finished))
+				.catch((error) => {
+					if (error.name !== 'AbortError')
+						this._error(error, 'configuration');
+				})
+				.finally(() => {
+					viewer.dialog.remove();
+					this._closingDialogs.delete(viewer.dialog);
+				});
+		} else viewer.dialog.remove();
 		if (activeViewers.get(this.ownerDocument) === this)
 			activeViewers.delete(this.ownerDocument);
-		this._state = this.isConnected && this._trigger ? 'ready' : 'idle';
-		if (this._trigger?.isConnected)
-			this._trigger.focus({ preventScroll: true });
+		this._state =
+			this.isConnected && this._entries.length ? 'ready' : 'idle';
+		if (viewer.opener?.isConnected)
+			viewer.opener.focus({ preventScroll: true });
 		this._emit('close', {});
 		this._scheduleLayout();
 	}

@@ -18,6 +18,7 @@ element.dataset.state = state;
 element.addEventListener('img-enlarge:change', (event) => {
 	const detail: ImgEnlargeChangeDetail = event.detail;
 	detail.element.dataset.position = `${detail.index}/${detail.total}`;
+	detail.image.dataset.position = `${detail.index}/${detail.total}`;
 });
 document.addEventListener('img-enlarge:error', (event) => {
 	const detail: ImgEnlargeErrorDetail = event.detail;

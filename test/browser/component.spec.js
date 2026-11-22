@@ -32,6 +32,40 @@ const files = new Map(
 	),
 );
 
+// Runtime fixtures stay independent of the authored demo's gallery examples.
+files.set(
+	'/demo/index.html',
+	files.get('/demo/index.html').replace(
+		'</main>',
+		`
+<div class="demo collection-thumbnails">
+  <img-enlarge id="mountains" name="landscapes-and-bikes">
+    <figure>
+      <a href="./mountains-large.svg"><img src="./mountains.svg" width="800" height="400" alt="A trail between two green mountains beneath a golden sun."></a>
+      <figcaption>A trail through the mountains.</figcaption>
+    </figure>
+  </img-enlarge>
+  <img-enlarge id="bicycle" name="landscapes-and-bikes" caption="A bicycle ready for an afternoon ride.">
+    <img src="./bicycle.svg" width="640" height="360" alt="A red bicycle with a basket beside a pale stone path.">
+  </img-enlarge>
+</div>
+</main>`,
+	),
+);
+
+async function addFailureFixture(page) {
+	await page.evaluate(() => {
+		const element = document.createElement('img-enlarge');
+		element.id = 'failure';
+		element.setAttribute('force', '');
+		element.setAttribute('src', './missing-image.svg');
+		element.innerHTML =
+			'<img src="./mountains.svg" width="800" height="400" alt="A trail through green mountains.">';
+		document.querySelector('main').append(element);
+	});
+	await expect(page.locator('#failure .img-enlarge-trigger')).toBeVisible();
+}
+
 async function serve(page, controls = 'auto', enhanced = true) {
 	await page.route('http://enlarge.test/**', (route) => {
 		const path = new URL(route.request().url()).pathname;
@@ -61,10 +95,354 @@ async function serve(page, controls = 'auto', enhanced = true) {
 		).toBeVisible();
 }
 
+test.describe('multi-image wrappers', () => {
+	for (const controls of ['auto', 'buttons']) {
+		test(`${controls}: isolates a wrapper gallery, opens the clicked picture, and restores its opener`, async ({
+			page,
+		}) => {
+			await serve(page);
+			await page.evaluate((controls) => {
+				const gallery = document.createElement('img-enlarge');
+				gallery.id = 'wrapper-gallery';
+				gallery.setAttribute('force', '');
+				gallery.setAttribute('controls', controls);
+				gallery.innerHTML =
+					'<figure><img src="/demo/mountains.svg" alt="Mountains" style="width:160px"><figcaption>Mountain view</figcaption></figure><figure><picture><source srcset="/demo/bicycle.svg" type="image/svg+xml"><img src="/demo/bicycle.svg" alt="Bicycle" style="width:160px"></picture><figcaption>Bicycle view</figcaption></figure>';
+				document.body.append(gallery);
+			}, controls);
+			const gallery = page.locator('#wrapper-gallery');
+			const triggers = gallery.locator('.img-enlarge-trigger');
+			await expect(triggers).toHaveCount(2);
+			await expect(triggers.nth(1)).toHaveAccessibleName(
+				'Enlarge image: Bicycle',
+			);
+			await expectNativeFocus(triggers.nth(1));
+			await triggers.nth(1).click();
+			await expectNativeFocus(gallery.locator('.img-enlarge-close'));
+			await expect(page.getByRole('status')).toHaveText('2 of 2');
+			await expect(
+				gallery.locator('.img-enlarge-slide').nth(1).locator('img'),
+			).toHaveAttribute('alt', 'Bicycle');
+			await expect(
+				gallery
+					.locator('.img-enlarge-slide')
+					.nth(1)
+					.locator('.img-enlarge-caption'),
+			).toHaveText('Bicycle view');
+			await page.keyboard.press('ArrowLeft');
+			await expect(page.getByRole('status')).toHaveText('1 of 2');
+			await page.keyboard.press('Escape');
+			await expect(triggers.nth(1)).toBeFocused();
+			await page.locator('#basic-image .img-enlarge-trigger').click();
+			await expect(page.getByRole('status')).toHaveText('1 of 1');
+		});
+	}
+
+	test('reevaluates each image independently when its rendered size changes', async ({
+		page,
+	}) => {
+		await serve(page);
+		await page.evaluate(() => {
+			const gallery = document.createElement('img-enlarge');
+			gallery.id = 'sized-gallery';
+			gallery.innerHTML =
+				'<img src="/demo/mountains.svg" alt="Small" style="width:160px"><img src="/demo/bicycle.svg" alt="Large" style="width:1600px">';
+			document.body.append(gallery);
+		});
+		const gallery = page.locator('#sized-gallery');
+		await expect(gallery.locator('.img-enlarge-trigger')).toHaveCount(1);
+		await gallery
+			.locator('img')
+			.nth(1)
+			.evaluate((image) => (image.style.width = '160px'));
+		await expect(gallery.locator('.img-enlarge-trigger')).toHaveCount(2);
+		await gallery
+			.locator('img')
+			.nth(0)
+			.evaluate((image) => (image.style.width = '1600px'));
+		await expect(gallery.locator('.img-enlarge-trigger')).toHaveCount(1);
+		await gallery.evaluate((element) => element.open());
+		await expect(gallery.locator('dialog')).toHaveCount(0);
+		await gallery.locator('.img-enlarge-trigger').click();
+		await expect(page.getByRole('status')).toHaveText('2 of 2');
+	});
+});
+
 test('demo navigation preserves unclipped native focus', async ({ page }) => {
 	await serve(page);
 	await expectNativeFocus(page.locator('header a').first());
 });
+
+test('organizes styles, attributes, labels, and the final galleries without duplicate IDs or demo initialization errors', async ({
+	page,
+}) => {
+	const errors = [];
+	page.on('pageerror', (error) => errors.push(error.message));
+	await serve(page);
+	expect(await page.locator('main > section > h2').allTextContents()).toEqual(
+		[
+			'One-off image enlargement',
+			'Force enlargement',
+			'Alternate enlarged versions',
+			'Other attributes',
+			'Rewrite or translate the labels',
+			'Galleries',
+			'Styling',
+		],
+	);
+	expect(
+		await page.locator('#styling-examples h3').allTextContents(),
+	).toEqual([
+		'Basic styling',
+		'Gallery styling',
+		'Hide disabled navigation arrows',
+	]);
+	await expect(page.locator('#product-other, #failure')).toHaveCount(0);
+	const ids = await page
+		.locator('[id]')
+		.evaluateAll((elements) => elements.map((element) => element.id));
+	expect(new Set(ids).size).toBe(ids.length);
+	expect(errors).toEqual([]);
+});
+
+test('demonstrates caption overrides, rewritten labels, and styled gallery navigation', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.locator('#caption-override .img-enlarge-trigger').click();
+	await expect(
+		page.locator('#caption-override dialog figcaption'),
+	).toHaveText('An afternoon on the mountain trail.');
+	await page.keyboard.press('Escape');
+	await expect(
+		page.locator('#caption-override > figure > figcaption'),
+	).toHaveText('A view from the trail.');
+	const rewritten = page.getByRole('button', {
+		name: 'View the trail photo',
+		exact: true,
+	});
+	await page.keyboard.press('Tab');
+	await expectNativeFocus(rewritten);
+	await page.keyboard.press('Enter');
+	await expect(
+		page.getByRole('button', { name: 'Back to the page', exact: true }),
+	).toBeFocused();
+	await page.keyboard.press('Escape');
+	await expect(rewritten).toBeFocused();
+	const gallery = page.locator('#styled-gallery');
+	await gallery.locator('.img-enlarge-trigger').nth(1).click();
+	await expect(page.getByRole('status')).toHaveText('2 of 2');
+	await expect(
+		gallery.locator(
+			'dialog .img-enlarge-slide[aria-hidden="false"] figcaption',
+		),
+	).toHaveText('The basket has room for a small bag.');
+	expect(
+		await gallery
+			.locator('dialog .img-enlarge-slide[aria-hidden="false"]')
+			.evaluate(
+				(el) =>
+					getComputedStyle(el).gridTemplateColumns.split(' ').length,
+			),
+	).toBe(1);
+	await page.keyboard.press('ArrowLeft');
+	await expect(page.getByRole('status')).toHaveText('1 of 2');
+});
+
+for (const reduced of [false, true]) {
+	test(`styled gallery animates only with motion enabled (${reduced}) and keeps logical close immediate`, async ({
+		page,
+	}) => {
+		await page.emulateMedia({
+			reducedMotion: reduced ? 'reduce' : 'no-preference',
+		});
+		await serve(page, 'buttons');
+		const gallery = page.locator('#styled-gallery');
+		const opener = gallery.locator('.img-enlarge-trigger').first();
+		await opener.click();
+		const dialog = gallery.locator('dialog');
+		const entry = await dialog.evaluate((el) => ({
+			animations: el.getAnimations().map((animation) => ({
+				property: animation.transitionProperty,
+				keyframes: animation.effect.getKeyframes(),
+			})),
+			control: (() => {
+				const style = getComputedStyle(
+					el.querySelector('.img-enlarge-close'),
+				);
+				return [style.backgroundColor, style.borderTopWidth];
+			})(),
+			columns: getComputedStyle(el.querySelector('.img-enlarge-slide'))
+				.gridTemplateColumns,
+		}));
+		expect(entry.control).toEqual(['rgba(0, 0, 0, 0)', '0px']);
+		expect(entry.columns).toBe('none');
+		if (reduced) {
+			expect(entry.animations).toHaveLength(0);
+		} else {
+			const fade = entry.animations.find(
+				(animation) => animation.property === 'opacity',
+			);
+			expect(fade).toBeDefined();
+			expect(fade.keyframes[0].opacity).toBe('0');
+			expect(fade.keyframes.at(-1).opacity).toBe('1');
+		}
+		await expect(dialog).toHaveCSS('opacity', '1');
+		await page.keyboard.press('Tab');
+		await expectNativeFocus(dialog.locator('.img-enlarge-close'));
+		await gallery.evaluate((el) => {
+			el.dataset.changes = '';
+			el.addEventListener('img-enlarge:change', (event) => {
+				el.dataset.changes += `${event.detail.index},`;
+			});
+		});
+		const track = dialog.locator('.img-enlarge-track');
+		const distance = await track.evaluate((el) => {
+			const slides = el.querySelectorAll('.img-enlarge-slide');
+			return (
+				slides[1].getBoundingClientRect().left -
+				slides[0].getBoundingClientRect().left
+			);
+		});
+		await page.keyboard.press('ArrowRight');
+		if (!reduced) {
+			await expect
+				.poll(
+					() =>
+						track.evaluate(
+							(el, distance) =>
+								el.scrollLeft > 0 &&
+								el.scrollLeft < distance - 1,
+							distance,
+						),
+					{ intervals: [16] },
+				)
+				.toBe(true);
+		}
+		await expect
+			.poll(() => track.evaluate((el) => el.scrollLeft))
+			.toBeCloseTo(distance, 0);
+		await expect(gallery).toHaveAttribute('data-changes', '1,');
+		const supportsExit = await page.evaluate(() =>
+			CSS.supports('transition-behavior: allow-discrete'),
+		);
+		await page.keyboard.press('Escape');
+		await expect(opener).toBeFocused();
+		expect(await gallery.evaluate((el) => el.state)).toBe('ready');
+		if (!reduced && supportsExit) {
+			expect(await dialog.count()).toBe(1);
+			const exit = await dialog.evaluate((el) => ({
+				display: getComputedStyle(el).display,
+				fade: el
+					.getAnimations()
+					.find(
+						(animation) =>
+							animation.transitionProperty === 'opacity',
+					)
+					?.effect.getKeyframes(),
+			}));
+			expect(exit.display).not.toBe('none');
+			expect(exit.fade[0].opacity).toBe('1');
+			expect(exit.fade.at(-1).opacity).toBe('0');
+			expect(
+				await dialog.evaluate((el) => ({
+					open: el.open,
+					inert: el.inert,
+					hidden: el.getAttribute('aria-hidden'),
+				})),
+			).toEqual({ open: false, inert: true, hidden: 'true' });
+		} else {
+			expect(await dialog.count()).toBe(0);
+		}
+		await expect(dialog).toHaveCount(0);
+	});
+}
+
+test('styled gallery exit cleanup survives canceled transitions and disconnection without affecting a new viewer', async ({
+	page,
+}) => {
+	await page.emulateMedia({ reducedMotion: 'no-preference' });
+	await serve(page, 'buttons');
+	const gallery = page.locator('#styled-gallery');
+	await gallery.locator('.img-enlarge-trigger').first().click();
+	await expect(gallery.locator('dialog')).toHaveCSS('opacity', '1');
+	await gallery.evaluate((el) => {
+		el.dataset.errors = '';
+		el.addEventListener(
+			'img-enlarge:error',
+			(event) => (el.dataset.errors += event.detail.phase),
+		);
+	});
+	await page.keyboard.press('Escape');
+	await page.locator('#basic-image .img-enlarge-trigger').click();
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await expect(gallery.locator('dialog')).toHaveCount(0);
+	await expect(page.locator('#basic-image dialog')).toBeVisible();
+	await expect(gallery).toHaveAttribute('data-errors', '');
+	await page.keyboard.press('Escape');
+	await page.emulateMedia({ reducedMotion: 'no-preference' });
+	await gallery.locator('.img-enlarge-trigger').first().click();
+	await expect(gallery.locator('dialog')).toHaveCSS('opacity', '1');
+	await page.keyboard.press('Escape');
+	expect(
+		await gallery.evaluate((el) => {
+			el.remove();
+			const retained = el.querySelectorAll('dialog').length;
+			document.querySelector('#gallery-styling-example .demo').append(el);
+			return retained;
+		}),
+	).toBe(0);
+	await expect(gallery.locator('.img-enlarge-trigger')).toHaveCount(2);
+	await expect(gallery).toHaveAttribute('data-errors', '');
+});
+
+for (const duringScroll of [false, true]) {
+	test(`styled gallery honors a rapid reversal (${duringScroll}) without another forward selection`, async ({
+		page,
+	}) => {
+		await page.emulateMedia({ reducedMotion: 'no-preference' });
+		await serve(page, 'buttons');
+		const gallery = page.locator('#styled-gallery');
+		await gallery.locator('.img-enlarge-trigger').first().click();
+		await expect(gallery.locator('dialog')).toHaveCSS('opacity', '1');
+		await gallery.evaluate((el) => {
+			el.dataset.changes = '';
+			el.addEventListener('img-enlarge:change', (event) => {
+				el.dataset.changes += `${event.detail.index},`;
+			});
+		});
+		if (duringScroll) {
+			await gallery.evaluate((el) => el.next());
+			await expect
+				.poll(() =>
+					gallery
+						.locator('.img-enlarge-track')
+						.evaluate((el) => el.scrollLeft),
+				)
+				.toBeGreaterThan(0);
+			await gallery.evaluate((el) => el.previous());
+		} else {
+			await gallery.evaluate((el) => {
+				el.next();
+				el.previous();
+			});
+		}
+		// A canceled no-op reversal may not emit scrollend.
+		await page.waitForTimeout(1000);
+		await expect
+			.poll(() => gallery.evaluate((el) => el._viewer.scrollTarget))
+			.toBeNull();
+		await expect(gallery).toHaveAttribute('data-changes', '1,0,');
+		await expect(gallery.locator('[role="status"]')).toHaveText('1 of 2');
+		await expect
+			.poll(() =>
+				gallery
+					.locator('.img-enlarge-track')
+					.evaluate((el) => el.scrollLeft),
+			)
+			.toBeCloseTo(0, 0);
+	});
+}
 
 test('opening from a previous viewer’s close callback leaves exactly one modal and restores focus', async ({
 	page,
@@ -894,6 +1272,7 @@ test('preserves image links, demonstrates explicit JavaScript collection control
 		page.locator('dialog .img-enlarge-slide[aria-hidden="false"] img'),
 	).toHaveAttribute('alt', 'A woven basket above the front wheel.');
 	await page.keyboard.press('Escape');
+	await addFailureFixture(page);
 	await page.locator('#failure .img-enlarge-trigger').click();
 	await expect(page.getByRole('status')).toContainText('could not be loaded');
 	await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
@@ -1004,6 +1383,7 @@ test('preserves the image box through failure and retry, then uses the recovered
 			});
 		}
 	});
+	await addFailureFixture(page);
 	const element = page.locator('#failure');
 	await element.evaluate((node) => {
 		node.setAttribute('src', '/recover-image.svg');
@@ -1295,7 +1675,7 @@ test('demonstrates scoped layout/caption overrides and independent product image
 		),
 	).toContainText('basket');
 	await page.keyboard.press('Escape');
-	await page.locator('#product-other .img-enlarge-trigger').click();
+	await page.locator('#basic-image .img-enlarge-trigger').click();
 	await expect(page.getByRole('status')).toHaveText('1 of 1');
 });
 

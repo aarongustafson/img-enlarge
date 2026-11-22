@@ -1,6 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { expectNativeFocus, readDemoStyles } from './demo-fixture.js';
+import {
+	expectNativeFocus,
+	expectPairLayout,
+	readDemoStyles,
+} from './demo-fixture.js';
 
 test.beforeEach(async ({ page }) => {
 	await page.route(
@@ -674,15 +678,12 @@ test.describe('authored demo without JavaScript', () => {
 		const pairs = page.locator('.code-demo-pair');
 		expect(await pairs.count()).toBeGreaterThan(0);
 		await expect(pairs.first()).toHaveCSS('display', 'grid');
-		await expect(page.locator('#mountains img')).toBeVisible();
+		await expect(page.locator('#linked-source img')).toBeVisible();
 		await expect(page.locator('img-enlarge button')).toHaveCount(0);
 		for (const width of [1000, 320]) {
 			await page.setViewportSize({ width, height: 800 });
 			for (const pair of await pairs.all()) {
-				const code = await pair.locator('pre').boundingBox();
-				const demo = await pair.locator('.demo').boundingBox();
-				if (width >= 768) expect(demo.x).toBeGreaterThan(code.x);
-				else expect(demo.y).toBeGreaterThan(code.y);
+				await expectPairLayout(pair, width);
 			}
 			expect(
 				await page.evaluate(() => document.documentElement.scrollWidth),

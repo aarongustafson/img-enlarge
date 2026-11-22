@@ -8,10 +8,6 @@
 	margin: 0 0 0.75rem;
 }
 
-.responsive-comparison > img-enlarge + p {
-	margin-block: 0.75rem 1.5rem;
-}
-
 .responsive-thumbnail > img,
 .responsive-thumbnail > picture > img {
 	inline-size: min(100%, 12rem);
@@ -45,7 +41,118 @@
 	text-align: start;
 }
 
-.product-card > h3:first-child {
+.gallery-thumbnails {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+}
+
+.animated-gallery .img-enlarge-dialog {
+	border: 0;
+	opacity: 0;
+	transform: translateY(0.75rem);
+	transition:
+		opacity 220ms ease,
+		transform 220ms ease,
+		display 220ms allow-discrete,
+		overlay 220ms allow-discrete;
+}
+
+.animated-gallery .img-enlarge-dialog[open] {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.animated-gallery .img-enlarge-dialog::backdrop {
+	opacity: 0;
+	transition:
+		opacity 220ms ease,
+		display 220ms allow-discrete,
+		overlay 220ms allow-discrete;
+}
+
+.animated-gallery .img-enlarge-dialog[open]::backdrop {
+	opacity: 1;
+}
+
+@supports not (overlay: auto) {
+	.animated-gallery .img-enlarge-dialog {
+		display: grid;
+		z-index: 1;
+		box-shadow: 0 0 0 100vmax rgb(0 0 0 / 75%);
+	}
+
+	.animated-gallery .img-enlarge-dialog::backdrop {
+		background: transparent;
+	}
+}
+
+@starting-style {
+	.animated-gallery .img-enlarge-dialog[open] {
+		opacity: 0;
+		transform: translateY(0.75rem);
+	}
+
+	.animated-gallery .img-enlarge-dialog[open]::backdrop {
+		opacity: 0;
+	}
+}
+
+.animated-gallery .img-enlarge-track {
+	scroll-behavior: smooth;
+}
+
+.animated-gallery .img-enlarge-dialog button {
+	color: CanvasText;
+	background: transparent;
+	border: 0;
+}
+
+.animated-gallery .img-enlarge-dialog button[aria-disabled='true'] {
+	color: GrayText;
+}
+
+@supports selector(::scroll-button(inline-start)) {
+	.animated-gallery .img-enlarge-track::scroll-button(*) {
+		color: CanvasText;
+		background: transparent;
+		border: 0;
+	}
+
+	.animated-gallery .img-enlarge-track::scroll-button(*):disabled {
+		color: GrayText;
+	}
+}
+
+.animated-gallery .img-enlarge-slide[aria-hidden='false'] .img-enlarge-image {
+	animation: gallery-image-in 220ms ease both;
+}
+
+@keyframes gallery-image-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.animated-gallery .img-enlarge-dialog,
+	.animated-gallery .img-enlarge-dialog::backdrop {
+		transition: none;
+	}
+
+	.animated-gallery .img-enlarge-track {
+		scroll-behavior: auto;
+	}
+
+	.animated-gallery .img-enlarge-image {
+		animation: none;
+	}
+}
+
+.product-card > h4:first-child {
 	margin-block-start: 0;
 }
 

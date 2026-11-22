@@ -3,6 +3,8 @@ export interface ImgEnlargeChangeDetail {
 	index: number;
 	total: number;
 	element: ImgEnlargeElement;
+	/** Original authored image for the selected slide. */
+	image: HTMLImageElement;
 }
 
 export interface ImgEnlargeErrorDetail {
@@ -12,7 +14,8 @@ export interface ImgEnlargeErrorDetail {
 }
 
 /**
- * Unnamed images open independently; matching nonempty name attributes opt into galleries.
+ * Each unnamed wrapper is an isolated gallery of its authored images.
+ * Matching nonempty name attributes connect individual wrappers or groups.
  * Configure labels in inline script[type="application/json"][data-img-enlarge-config].
  * An empty marker sets page defaults; a value targets that gallery name.
  * The JSON accepts a flat label object or language-keyed dictionaries;
@@ -34,8 +37,9 @@ export class ImgEnlargeElement extends HTMLElement {
 	): void;
 	/** Reread markup, labels, and language; close the viewer and retain opener focus. */
 	refresh(): void;
-	/** Open this image's collection when enlargement is useful or force is present. */
+	/** Open at the first authored image when enlargement is useful or force is present. */
 	open(): void;
+	/** Close and restore focus immediately; remove inert exit visuals after CSS transitions. */
 	close(): void;
 	/** Stop at the last image; do not wrap. */
 	next(): void;
