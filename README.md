@@ -232,8 +232,7 @@ link’s `href` or `type`, call
 If a later responsive source fails after an image has loaded, the viewer updates
 the error status and offers Retry again.
 The component doesn’t request enlarged files or check their availability before
-you open them. See the
-[intentional missing-image demo](demo/index.html#failure) to test recovery.
+you open them.
 
 ## Responsive enhancement
 
