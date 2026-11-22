@@ -18,3 +18,25 @@ it('shows copyable module-script wrappers around the CDN registration code', asy
 		);
 	}
 });
+
+it('keeps copied gallery labels, captions, and image links aligned with the live examples', async () => {
+	const template = document.createElement('template');
+	template.innerHTML = await readFile('demo/index.html', 'utf8');
+	for (const id of ['localization-example', 'product-example']) {
+		const section = template.content.getElementById(id);
+		const pair = [...section.querySelectorAll('.code-demo-pair')].at(-1);
+		const copied = document.createElement('template');
+		copied.innerHTML = pair.querySelector('pre code').textContent;
+		const describe = (root) =>
+			[...root.querySelectorAll('img-enlarge')].map((element) => ({
+				name: element.getAttribute('name'),
+				caption: element.getAttribute('caption'),
+				openLabel: element.getAttribute('open-label'),
+				image: element.querySelector('img').getAttribute('src'),
+				link: element.querySelector('a')?.getAttribute('href') ?? null,
+			}));
+		expect(describe(copied.content), id).toEqual(
+			describe(pair.querySelector('.demo')),
+		);
+	}
+});
