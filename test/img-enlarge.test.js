@@ -24,6 +24,42 @@ function append(
 }
 
 describe('img-enlarge', () => {
+	it.each(['refresh', 'inactive', 'removed'])(
+		'rereads the requested image opener after a previous close callback: %s',
+		async (change) => {
+			const first = append();
+			const group = append(
+				'',
+				'<img src="/one.svg" alt="One"><img src="/two.svg" alt="Two">',
+			);
+			await settle();
+			const opener = group.querySelectorAll('.img-enlarge-trigger')[1];
+			const image = group.querySelectorAll('img')[1];
+			first.open();
+			first.addEventListener(
+				'img-enlarge:close',
+				() => {
+					if (change === 'inactive') group.removeAttribute('force');
+					if (change === 'removed') image.remove();
+					group.refresh();
+				},
+				{ once: true },
+			);
+			opener.click();
+			if (change === 'refresh') {
+				expect(group.state).toBe('open');
+				group.close();
+				const replacement = group.querySelectorAll(
+					'.img-enlarge-trigger',
+				)[1];
+				expect(replacement).not.toBe(opener);
+				expect(document.activeElement).toBe(replacement);
+			} else {
+				expect(document.querySelector('dialog')).toBeNull();
+			}
+		},
+	);
+
 	it.each(['', 'name=""'])(
 		'isolates an unnamed multi-image gallery: %s',
 		async (attributes) => {

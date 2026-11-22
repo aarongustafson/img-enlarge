@@ -274,11 +274,16 @@ for (const reduced of [false, true]) {
 			})(),
 			columns: getComputedStyle(el.querySelector('.img-enlarge-slide'))
 				.gridTemplateColumns,
+			imageAnimations: el
+				.querySelector('.img-enlarge-image')
+				.getAnimations()
+				.map((animation) => animation.animationName),
 		}));
 		expect(entry.control).toEqual(['rgba(0, 0, 0, 0)', '0px']);
 		expect(entry.columns).toBe('none');
 		if (reduced) {
 			expect(entry.animations).toHaveLength(0);
+			expect(entry.imageAnimations).toHaveLength(0);
 		} else {
 			const fade = entry.animations.find(
 				(animation) => animation.property === 'opacity',
@@ -305,6 +310,15 @@ for (const reduced of [false, true]) {
 			);
 		});
 		await page.keyboard.press('ArrowRight');
+		if (reduced) {
+			expect(
+				await dialog
+					.locator(
+						'.img-enlarge-slide[aria-hidden="false"] .img-enlarge-image',
+					)
+					.evaluate((el) => el.getAnimations().length),
+			).toBe(0);
+		}
 		if (!reduced) {
 			await expect
 				.poll(
@@ -443,6 +457,24 @@ for (const duringScroll of [false, true]) {
 			.toBeCloseTo(0, 0);
 	});
 }
+
+test('closing restores the replacement opener after an earlier close callback refreshes the requested wrapper', async ({
+	page,
+}) => {
+	await serve(page, 'buttons');
+	await page.evaluate(() => {
+		const first = document.querySelector('#mountains');
+		const second = document.querySelector('#bicycle');
+		first.open();
+		first.addEventListener('img-enlarge:close', () => second.refresh(), {
+			once: true,
+		});
+		second.open();
+	});
+	await expect(page.locator('#bicycle dialog')).toBeVisible();
+	await page.keyboard.press('Escape');
+	await expect(page.locator('#bicycle .img-enlarge-trigger')).toBeFocused();
+});
 
 test('opening from a previous viewer’s close callback leaves exactly one modal and restores focus', async ({
 	page,

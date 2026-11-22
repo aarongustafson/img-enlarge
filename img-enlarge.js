@@ -705,7 +705,11 @@ export class ImgEnlargeElement extends BaseElement {
 				!this.isConnected
 			)
 				return;
-			this._createViewer(items, index, entry.trigger);
+			const current = this._entries.find(
+				(candidate) => candidate.image === entry.image,
+			);
+			if (!current?.eligible) return;
+			this._createViewer(items, index, current.trigger);
 			activeViewers.set(this.ownerDocument, this);
 			this._viewer.dialog.showModal();
 			this._state = 'open';

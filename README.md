@@ -308,8 +308,10 @@ Escape or Close returns focus to the clicked opener, even after navigation.
 
 - Components with invalid configuration or `[hidden]`/`[inert]` ancestors
   don’t join collections.
-- Each opening takes a snapshot in image document order. Close and reopen to pick up
-  additions, removals, source changes, or reordered images. Connected members
+- Each opening takes a snapshot in image document order. Close and reopen to
+  pick up source and caption changes for existing images. After adding, removing,
+  or reordering images inside a wrapper, call its `refresh()` method to rebuild
+  its image membership and openers before opening again. Connected wrappers
   still awaiting their setup microtask are initialized before the snapshot.
 - Opening another viewer closes the current one. If a close-event listener opens
   a viewer, that callback’s viewer remains active; the interrupted opening doesn’t
