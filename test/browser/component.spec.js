@@ -370,6 +370,66 @@ test('uses referenced button-input values before title fallbacks', async ({
 	}
 });
 
+test('uses current embedded textbox values and preserves directly named block boundaries', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const gallery = document.createElement('img-enlarge');
+		gallery.id = 'embedded-names';
+		gallery.setAttribute('force', '');
+		gallery.innerHTML = `
+			<span id="text-control-label">Mountain <input type="text" value="Old" aria-label="Ignored" title="Ignored"></span>
+			<span id="textarea-label">Mountain <textarea aria-label="Ignored" title="Ignored">Old</textarea></span>
+			<span id="empty-text-label">Mountain<input type="text" value="" aria-label="Ignored" title="Ignored"></span>
+			<span id="block-label"><div role="img" aria-label="Mountain"></div><div role="img" aria-label="trail"></div></span>
+			<span id="inline-label"><span role="img" aria-label="Moun"></span><span role="img" aria-label="tain"></span></span>
+		`;
+		gallery.querySelector('input').value = 'trail';
+		gallery.querySelector('textarea').value = 'trail';
+		for (const label of [
+			'text-control-label',
+			'textarea-label',
+			'empty-text-label',
+			'block-label',
+			'inline-label',
+		]) {
+			const image = document.createElement('img');
+			image.src = '/demo/mountains.svg';
+			image.alt = 'Ignored';
+			image.style.width = '160px';
+			image.setAttribute('aria-labelledby', label);
+			gallery.append(image);
+		}
+		document.body.append(gallery);
+	});
+	const gallery = page.locator('#embedded-names');
+	for (const [index, name] of [
+		'Mountain trail',
+		'Mountain trail',
+		'Mountain',
+		'Mountain trail',
+		'Mountain',
+	].entries()) {
+		await expect(gallery.locator('img').nth(index)).toHaveAccessibleName(
+			name,
+		);
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName(`Enlarge image: ${name}`);
+	}
+	await gallery.evaluate((element) => {
+		element.querySelector('input').value = 'path';
+		element.refresh();
+	});
+	await expect(gallery.locator('img').first()).toHaveAccessibleName(
+		'Mountain path',
+	);
+	await expect(
+		gallery.locator('.img-enlarge-trigger').first(),
+	).toHaveAccessibleName('Enlarge image: Mountain path');
+});
+
 test('demo navigation preserves unclipped native focus', async ({ page }) => {
 	await serve(page);
 	await expectNativeFocus(page.locator('header a').first());

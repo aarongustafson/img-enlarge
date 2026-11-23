@@ -256,6 +256,9 @@ Referenced labels preserve word boundaries at line breaks and use their own
 ancestors can still supply text, including hidden descendants.
 Referenced content includes open shadow roots and assigned slots (or their
 fallback content), and button inputs supply their nonempty `value` before `title`.
+Embedded text inputs and textareas contribute their current values rather than
+their own labels. Block children retain word boundaries regardless of how they
+are named; inline fragments remain joined.
 For example, `open-label="View photo: {name}"` uses the image’s name in your
 own wording. Templates work in attributes and shared JSON, including translations.
 Overrides without `{name}` stay literal; gallery openers no longer append `alt`

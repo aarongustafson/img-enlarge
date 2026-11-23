@@ -221,11 +221,20 @@ export class ImgEnlargeElement extends BaseElement {
 		return false;
 	}
 
-	static _nameText(element, includeHidden = false) {
+	static _nameText(element, includeHidden = false, embedded = false) {
 		if (!includeHidden && ImgEnlargeElement._isNameHidden(element))
 			return '';
 		if (['script', 'style', 'template'].includes(element.localName))
 			return '';
+		if (
+			embedded &&
+			(element.localName === 'textarea' ||
+				(element.localName === 'input' &&
+					['text', 'search', 'tel', 'url', 'email'].includes(
+						element.type,
+					)))
+		)
+			return element.value;
 		const label = element.getAttribute('aria-label')?.trim();
 		if (label) return label;
 		if (
@@ -247,21 +256,23 @@ export class ImgEnlargeElement extends BaseElement {
 			if (assigned.length) children = assigned;
 		}
 		const text = [...children]
-			.map((node) =>
-				node.nodeType === 3
-					? node.textContent
-					: node.nodeType === 1
-						? ImgEnlargeElement._nameText(node, includeHidden)
-						: '',
-			)
+			.map((node) => {
+				if (node.nodeType === 3) return node.textContent;
+				if (node.nodeType !== 1) return '';
+				const name = ImgEnlargeElement._nameText(
+					node,
+					includeHidden,
+					true,
+				);
+				if (!name) return '';
+				const { display } =
+					node.ownerDocument.defaultView.getComputedStyle(node);
+				return display.startsWith('inline') || display === 'contents'
+					? name
+					: ` ${name} `;
+			})
 			.join('');
-		if (!text.trim()) return element.getAttribute('title') ?? '';
-		const style =
-			element.ownerDocument.defaultView.getComputedStyle(element);
-		return style.display.startsWith('inline') ||
-			style.display === 'contents'
-			? text
-			: ` ${text} `;
+		return text.trim() ? text : (element.getAttribute('title') ?? '');
 	}
 
 	static _imageName(image) {
