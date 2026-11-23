@@ -168,6 +168,45 @@ test.describe('multi-image wrappers', () => {
 	});
 });
 
+test('uses authored accessible names in default and translated opener templates', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const gallery = document.createElement('img-enlarge');
+		gallery.id = 'named-images';
+		gallery.setAttribute('force', '');
+		gallery.innerHTML =
+			'<span id="image-label" hidden>Mountain <strong>trail</strong></span><img src="/demo/mountains.svg" aria-labelledby="missing image-label" aria-label="Ignored" alt="Ignored" style="width:160px"><img src="/demo/bicycle.svg" aria-label="City bicycle" alt="Ignored" style="width:160px"><img src="/demo/bicycle.svg" alt="Basket" style="width:160px"><img src="/demo/bicycle.svg" title="Rear wheel" style="width:160px"><img src="/demo/bicycle.svg" alt="" title="Ignored" style="width:160px">';
+		document.body.append(gallery);
+	});
+	const gallery = page.locator('#named-images');
+	const names = ['Mountain trail', 'City bicycle', 'Basket', 'Rear wheel'];
+	for (const [index, name] of names.entries()) {
+		await expect(gallery.locator('img').nth(index)).toHaveAccessibleName(
+			name,
+		);
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName(`Enlarge image: ${name}`);
+	}
+	await expect(
+		gallery.locator('.img-enlarge-trigger').nth(4),
+	).toHaveAccessibleName('Enlarge image');
+	await gallery.evaluate((element) =>
+		element.setAttribute('open-label', 'Agrandir : {name}'),
+	);
+	for (const [index, name] of [...names, 'image'].entries()) {
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName(`Agrandir : ${name}`);
+	}
+	await gallery.locator('.img-enlarge-trigger').nth(1).click();
+	await expect(gallery.locator('.img-enlarge-close')).toBeFocused();
+	await page.keyboard.press('Escape');
+	await expect(gallery.locator('.img-enlarge-trigger').nth(1)).toBeFocused();
+});
+
 test('demo navigation preserves unclipped native focus', async ({ page }) => {
 	await serve(page);
 	await expectNativeFocus(page.locator('header a').first());
@@ -1018,7 +1057,9 @@ for (const controls of ['auto', 'buttons']) {
 		await expect(trigger).toHaveAccessibleName('Agrandir le paysage');
 		await expect(
 			page.locator('#localized-detail .img-enlarge-trigger'),
-		).toHaveAccessibleName('Agrandir la photo');
+		).toHaveAccessibleName(
+			'Agrandir la photo : Un vélo rouge avec un panier.',
+		);
 		await trigger.click();
 		const dialog = page.getByRole('dialog', { name: 'Images agrandies' });
 		await expect(dialog).toHaveAttribute('lang', 'fr-CA');
@@ -1320,7 +1361,9 @@ test('uses flat page labels without language-code keys and refreshes edited JSON
 	await serve(page);
 	await page.goto('http://enlarge.test/demo/labels-flat.html');
 	const trigger = page.locator('#flat-first .img-enlarge-trigger');
-	await expect(trigger).toHaveAccessibleName('Agrandir l’image');
+	await expect(trigger).toHaveAccessibleName(
+		'Agrandir l’image : Un vélo rouge avec un panier.',
+	);
 	await trigger.click();
 	const dialog = page.getByRole('dialog', { name: 'Images agrandies' });
 	await expect(dialog).toHaveAttribute('lang', 'fr');
@@ -1590,7 +1633,9 @@ test('carries styles without an author stylesheet link and positions icon contro
 		.locator('#mountains')
 		.evaluate((element) => element.setAttribute('controls', 'buttons'));
 	const trigger = page.locator('#mountains .img-enlarge-trigger');
-	await expect(trigger).toHaveAccessibleName('Enlarge image');
+	await expect(trigger).toHaveAccessibleName(
+		'Enlarge image: A trail between two green mountains beneath a golden sun.',
+	);
 	const imageBox = await page
 		.locator('#mountains > figure img')
 		.boundingBox();

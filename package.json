@@ -1,6 +1,6 @@
 {
 	"name": "@aarongustafson/img-enlarge",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "Progressively enhance images with a dialog-based enlarged view and grouped navigation.",
 	"keywords": [
 		"html",

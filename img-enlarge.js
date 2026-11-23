@@ -2,7 +2,7 @@ const BaseElement = globalThis.HTMLElement ?? class {};
 const activeViewers = new WeakMap();
 const labelConfigurations = new WeakMap();
 const defaultLabels = {
-	'open-label': 'Enlarge image',
+	'open-label': 'Enlarge image: {name}',
 	'dialog-label': 'Enlarged images',
 	'close-label': 'Close',
 	'previous-label': 'Previous image',
@@ -198,6 +198,67 @@ export class ImgEnlargeElement extends BaseElement {
 		return labels;
 	}
 
+	static _nameText(element, includeHidden = false) {
+		const style =
+			element.ownerDocument.defaultView.getComputedStyle(element);
+		const hidden =
+			element.getAttribute('aria-hidden') === 'true' ||
+			style.display === 'none' ||
+			style.visibility === 'hidden';
+		if (hidden && !includeHidden) return '';
+		if (['script', 'style', 'template'].includes(element.localName))
+			return '';
+		const label = element.getAttribute('aria-label')?.trim();
+		if (label) return label;
+		if (element.localName === 'img')
+			return (
+				element.getAttribute('alt') ??
+				element.getAttribute('title') ??
+				''
+			);
+		const text = [...element.childNodes]
+			.map((node) =>
+				node.nodeType === 3
+					? node.textContent
+					: node.nodeType === 1
+						? ImgEnlargeElement._nameText(node, includeHidden)
+						: '',
+			)
+			.join('');
+		return style.display.startsWith('inline') ||
+			style.display === 'contents'
+			? text
+			: ` ${text} `;
+	}
+
+	static _imageName(image) {
+		const references = (image.getAttribute('aria-labelledby') ?? '')
+			.split(/\s+/)
+			.filter(Boolean)
+			.map((id) => image.getRootNode().getElementById(id))
+			.filter(Boolean);
+		const name = references.length
+			? references
+					.map((element) => {
+						const style =
+							element.ownerDocument.defaultView.getComputedStyle(
+								element,
+							);
+						return ImgEnlargeElement._nameText(
+							element,
+							element.getAttribute('aria-hidden') === 'true' ||
+								style.display === 'none' ||
+								style.visibility === 'hidden',
+						);
+					})
+					.join(' ')
+			: image.getAttribute('aria-label')?.trim() ||
+				(image.getAttribute('alt') ??
+					image.getAttribute('title') ??
+					'');
+		return name.replace(/\s+/g, ' ').trim();
+	}
+
 	/** Reread configuration, closing the viewer and retaining opener focus. */
 	refresh() {
 		this._pending = false;
@@ -230,11 +291,14 @@ export class ImgEnlargeElement extends BaseElement {
 			}
 			this._entries = images.map((image) => {
 				const label = this._labels['open-label'];
+				const name = label.includes('{name}')
+					? ImgEnlargeElement._imageName(image)
+					: '';
 				const trigger = this._button(
 					'open',
-					images.length > 1 && image.alt.trim()
-						? `${label}: ${image.alt}`
-						: label,
+					!name && label === defaultLabels['open-label']
+						? 'Enlarge image'
+						: label.replaceAll('{name}', () => name || 'image'),
 				);
 				trigger.className = 'img-enlarge-trigger';
 				trigger.setAttribute('aria-haspopup', 'dialog');

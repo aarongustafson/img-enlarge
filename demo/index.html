@@ -403,6 +403,13 @@
 					attribute on the component for a one-off change, or use a
 					JSON configuration for shared labels.
 				</p>
+				<p>
+					The default Enlarge button label includes the image’s
+					accessible name. Include <code>{name}</code> in your
+					<code>open-label</code> template to keep that name in a
+					rewritten or translated label. Leave it out for a fixed
+					label, as in the first example.
+				</p>
 				<h3>Rewrite a label</h3>
 				<p>
 					This version rewrites the label of the open &amp; close
@@ -466,7 +473,7 @@
 						><code><mark>&lt;script type="application/json" data-img-enlarge-config="french"&gt;
 {
   "fr": {
-    "open-label": "Agrandir l’image",
+    "open-label": "Agrandir l’image : {name}",
     "dialog-label": "Images agrandies",
     "close-label": "Fermer",
     "previous-label": "Image précédente",
@@ -476,7 +483,7 @@
     "retry-label": "Réessayer",
     "position-label": "{current} sur {total}"
   },
-  "fr-CA": { "open-label": "Agrandir la photo" }
+  "fr-CA": { "open-label": "Agrandir la photo : {name}" }
 }
 &lt;/script&gt;</mark>
 
@@ -500,7 +507,7 @@
 						>
 							{
 								"fr": {
-									"open-label": "Agrandir l’image",
+									"open-label": "Agrandir l’image : {name}",
 									"dialog-label": "Images agrandies",
 									"close-label": "Fermer",
 									"previous-label": "Image précédente",
@@ -510,7 +517,9 @@
 									"retry-label": "Réessayer",
 									"position-label": "{current} sur {total}"
 								},
-								"fr-CA": { "open-label": "Agrandir la photo" }
+								"fr-CA": {
+									"open-label": "Agrandir la photo : {name}"
+								}
 							}
 						</script>
 						<img-enlarge
@@ -566,7 +575,7 @@
 							<pre
 								aria-label="Photos from an afternoon ride code"
 								tabindex="0"
-							><code><mark>&lt;img-enlarge force open-label="Enlarge ride photo"&gt;</mark>
+							><code><mark>&lt;img-enlarge force open-label="Enlarge ride photo: {name}"&gt;</mark>
   &lt;figure&gt;
     &lt;img src="./bicycle.svg" width="192" height="108"
       alt="A red bicycle with a basket beside a pale stone path."&gt;
@@ -583,7 +592,10 @@
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
 						</micro-lighter>
 						<div class="demo" data-demo-label="Live example">
-							<img-enlarge force open-label="Enlarge ride photo">
+							<img-enlarge
+								force
+								open-label="Enlarge ride photo: {name}"
+							>
 								<figure>
 									<img
 										src="./bicycle.svg"

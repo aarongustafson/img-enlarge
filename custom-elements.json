@@ -96,8 +96,8 @@
 						{
 							"name": "open-label",
 							"type": { "text": "string" },
-							"default": "\"Enlarge image\"",
-							"description": "Nonempty opener text. In a multi-image wrapper, a nonempty authored image alt is appended to distinguish its opener."
+							"default": "\"Enlarge image: {name}\"",
+							"description": "Nonempty opener template for single images and galleries. Replace every {name} with the authored image name from aria-labelledby, nonempty aria-label, alt, or title when alt is absent. Insert plain text with normalized whitespace. Without a name, the default becomes Enlarge image and custom templates substitute image. Overrides without {name} are literal; no automatic alt suffix. Refresh after changing image names or referenced text."
 						},
 						{
 							"name": "dialog-label",
