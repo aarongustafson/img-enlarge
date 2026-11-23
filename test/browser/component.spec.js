@@ -207,6 +207,77 @@ test('uses authored accessible names in default and translated opener templates'
 	await expect(gallery.locator('.img-enlarge-trigger').nth(1)).toBeFocused();
 });
 
+test('preserves line breaks, title fallbacks, and ancestor-hidden label content', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const gallery = document.createElement('img-enlarge');
+		gallery.id = 'referenced-names';
+		gallery.setAttribute('force', '');
+		gallery.innerHTML = `
+			<span id="line-break-label">Mountain<br>trail</span>
+			<button id="title-label" title="Mountains"><svg aria-hidden="true"></svg></button>
+			<div hidden><span id="ancestor-hidden-label">Mountain <span hidden>trail</span></span></div>
+			<div aria-hidden="true"><span id="aria-hidden-label">Mountain <span hidden>trail</span></span></div>
+			<div style="visibility:hidden"><span id="visible-label" style="visibility:visible">Mountain <span hidden>Excluded</span>trail</span></div>
+		`;
+		for (const label of [
+			'line-break-label',
+			'title-label',
+			'ancestor-hidden-label',
+			'aria-hidden-label',
+			'visible-label',
+		]) {
+			const image = document.createElement('img');
+			image.src = '/demo/mountains.svg';
+			image.alt = 'Ignored';
+			image.style.width = '160px';
+			image.setAttribute('aria-labelledby', label);
+			gallery.append(image);
+		}
+		document.body.append(gallery);
+	});
+	const gallery = page.locator('#referenced-names');
+	for (const [index, name] of [
+		'Mountain trail',
+		'Mountains',
+		'Mountain trail',
+		'Mountain trail',
+		'Mountain trail',
+	].entries()) {
+		await expect(gallery.locator('img').nth(index)).toHaveAccessibleName(
+			name,
+		);
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName(`Enlarge image: ${name}`);
+	}
+});
+
+test('includes hidden label content through a shadow-tree slot ancestor', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const host = document.createElement('div');
+		host.innerHTML =
+			'<span id="slotted-label">Mountain <span hidden>trail</span></span>';
+		host.attachShadow({ mode: 'open' }).innerHTML =
+			'<div hidden><slot></slot></div>';
+		document.body.append(host);
+		const element = document.createElement('img-enlarge');
+		element.id = 'slotted-image';
+		element.setAttribute('force', '');
+		element.innerHTML =
+			'<img src="/demo/mountains.svg" alt="Ignored" aria-labelledby="slotted-label" style="width:160px">';
+		document.body.append(element);
+	});
+	await expect(
+		page.locator('#slotted-image .img-enlarge-trigger'),
+	).toHaveAccessibleName('Enlarge image: Mountain trail');
+});
+
 test('demo navigation preserves unclipped native focus', async ({ page }) => {
 	await serve(page);
 	await expectNativeFocus(page.locator('header a').first());

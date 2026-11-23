@@ -251,6 +251,9 @@ name, for both single images and galleries. Names come from `aria-labelledby`
 (referenced labels in ID order), then a nonempty `aria-label`, then `alt`, then
 `title` when `alt` is absent. Whitespace is normalized; an explicitly empty `alt`
 does not fall back to `title`. Names are inserted as plain text.
+Referenced labels preserve word boundaries at line breaks and use their own
+`title` when their content supplies no name. Labels hidden by themselves or
+ancestors can still supply text, including hidden descendants.
 For example, `open-label="View photo: {name}"` uses the image’s name in your
 own wording. Templates work in attributes and shared JSON, including translations.
 Overrides without `{name}` stay literal; gallery openers no longer append `alt`

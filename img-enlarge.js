@@ -198,18 +198,37 @@ export class ImgEnlargeElement extends BaseElement {
 		return labels;
 	}
 
-	static _nameText(element, includeHidden = false) {
-		const style =
+	static _isNameHidden(element) {
+		// Unlike display and aria-hidden, inherited visibility can be overridden.
+		const { visibility } =
 			element.ownerDocument.defaultView.getComputedStyle(element);
-		const hidden =
-			element.getAttribute('aria-hidden') === 'true' ||
-			style.display === 'none' ||
-			style.visibility === 'hidden';
-		if (hidden && !includeHidden) return '';
+		if (['hidden', 'collapse'].includes(visibility)) return true;
+		for (
+			let current = element;
+			current;
+			current =
+				current.assignedSlot ??
+				current.parentElement ??
+				current.getRootNode().host
+		) {
+			if (
+				current.getAttribute('aria-hidden') === 'true' ||
+				current.ownerDocument.defaultView.getComputedStyle(current)
+					.display === 'none'
+			)
+				return true;
+		}
+		return false;
+	}
+
+	static _nameText(element, includeHidden = false) {
+		if (!includeHidden && ImgEnlargeElement._isNameHidden(element))
+			return '';
 		if (['script', 'style', 'template'].includes(element.localName))
 			return '';
 		const label = element.getAttribute('aria-label')?.trim();
 		if (label) return label;
+		if (element.localName === 'br') return ' ';
 		if (element.localName === 'img')
 			return (
 				element.getAttribute('alt') ??
@@ -225,6 +244,9 @@ export class ImgEnlargeElement extends BaseElement {
 						: '',
 			)
 			.join('');
+		if (!text.trim()) return element.getAttribute('title') ?? '';
+		const style =
+			element.ownerDocument.defaultView.getComputedStyle(element);
 		return style.display.startsWith('inline') ||
 			style.display === 'contents'
 			? text
@@ -239,18 +261,12 @@ export class ImgEnlargeElement extends BaseElement {
 			.filter(Boolean);
 		const name = references.length
 			? references
-					.map((element) => {
-						const style =
-							element.ownerDocument.defaultView.getComputedStyle(
-								element,
-							);
-						return ImgEnlargeElement._nameText(
+					.map((element) =>
+						ImgEnlargeElement._nameText(
 							element,
-							element.getAttribute('aria-hidden') === 'true' ||
-								style.display === 'none' ||
-								style.visibility === 'hidden',
-						);
-					})
+							ImgEnlargeElement._isNameHidden(element),
+						),
+					)
 					.join(' ')
 			: image.getAttribute('aria-label')?.trim() ||
 				(image.getAttribute('alt') ??
