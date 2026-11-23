@@ -68,6 +68,8 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 - Ensure existing tests still pass
 - Aim for high test coverage
 - Use `npm run test:coverage` to check coverage
+- Dependency security regressions exercise glob amplification limits in the
+  linting dependency tree with `npm run test:run -- test/dependency-security.test.js`.
 
 ## Coding Style
 
