@@ -2,7 +2,7 @@ const BaseElement = globalThis.HTMLElement ?? class {};
 const activeViewers = new WeakMap();
 const labelConfigurations = new WeakMap();
 const defaultLabels = {
-	'open-label': 'Enlarge image',
+	'open-label': 'Enlarge image: {name}',
 	'dialog-label': 'Enlarged images',
 	'close-label': 'Close',
 	'previous-label': 'Previous image',
@@ -198,6 +198,105 @@ export class ImgEnlargeElement extends BaseElement {
 		return labels;
 	}
 
+	static _isNameHidden(element) {
+		// Unlike display and aria-hidden, inherited visibility can be overridden.
+		const { visibility } =
+			element.ownerDocument.defaultView.getComputedStyle(element);
+		if (['hidden', 'collapse'].includes(visibility)) return true;
+		for (
+			let current = element;
+			current;
+			current =
+				current.assignedSlot ??
+				current.parentElement ??
+				current.getRootNode().host
+		) {
+			if (
+				current.getAttribute('aria-hidden') === 'true' ||
+				current.ownerDocument.defaultView.getComputedStyle(current)
+					.display === 'none'
+			)
+				return true;
+		}
+		return false;
+	}
+
+	static _nameText(element, includeHidden = false, embedded = false) {
+		if (!includeHidden && ImgEnlargeElement._isNameHidden(element))
+			return '';
+		if (['script', 'style', 'template'].includes(element.localName))
+			return '';
+		if (
+			embedded &&
+			(element.localName === 'textarea' ||
+				(element.localName === 'input' &&
+					['text', 'search', 'tel', 'url', 'email'].includes(
+						element.type,
+					)))
+		)
+			return element.value;
+		const label = element.getAttribute('aria-label')?.trim();
+		if (label) return label;
+		if (
+			element.localName === 'input' &&
+			['button', 'submit', 'reset'].includes(element.type) &&
+			element.value.trim()
+		)
+			return element.value;
+		if (element.localName === 'br') return ' ';
+		if (element.localName === 'img')
+			return (
+				element.getAttribute('alt') ??
+				element.getAttribute('title') ??
+				''
+			);
+		let children = element.shadowRoot?.childNodes ?? element.childNodes;
+		if (element.localName === 'slot') {
+			const assigned = element.assignedNodes();
+			if (assigned.length) children = assigned;
+		}
+		const text = [...children]
+			.map((node) => {
+				if (node.nodeType === 3) return node.textContent;
+				if (node.nodeType !== 1) return '';
+				const name = ImgEnlargeElement._nameText(
+					node,
+					includeHidden,
+					true,
+				);
+				if (!name) return '';
+				const { display } =
+					node.ownerDocument.defaultView.getComputedStyle(node);
+				return display.startsWith('inline') || display === 'contents'
+					? name
+					: ` ${name} `;
+			})
+			.join('');
+		return text.trim() ? text : (element.getAttribute('title') ?? '');
+	}
+
+	static _imageName(image) {
+		const references = (image.getAttribute('aria-labelledby') ?? '')
+			.split(/\s+/)
+			.filter(Boolean)
+			.map((id) => image.getRootNode().getElementById(id))
+			.filter(Boolean);
+		const name = references.length
+			? references
+					.map((element) =>
+						ImgEnlargeElement._nameText(
+							element,
+							ImgEnlargeElement._isNameHidden(element),
+						),
+					)
+					.join(' ')
+			: image.getAttribute('aria-label')?.trim() ||
+				(image.getAttribute('alt') ??
+					image.getAttribute('title') ??
+					'');
+		return name.replace(/\s+/g, ' ').trim();
+	}
+
 	/** Reread configuration, closing the viewer and retaining opener focus. */
 	refresh() {
 		this._pending = false;
@@ -230,11 +329,14 @@ export class ImgEnlargeElement extends BaseElement {
 			}
 			this._entries = images.map((image) => {
 				const label = this._labels['open-label'];
+				const name = label.includes('{name}')
+					? ImgEnlargeElement._imageName(image)
+					: '';
 				const trigger = this._button(
 					'open',
-					images.length > 1 && image.alt.trim()
-						? `${label}: ${image.alt}`
-						: label,
+					!name && label === defaultLabels['open-label']
+						? 'Enlarge image'
+						: label.replaceAll('{name}', () => name || 'image'),
 				);
 				trigger.className = 'img-enlarge-trigger';
 				trigger.setAttribute('aria-haspopup', 'dialog');

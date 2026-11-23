@@ -233,7 +233,7 @@ need the same labels.
 
 | Attribute        | Default                          |
 | ---------------- | -------------------------------- |
-| `open-label`     | `Enlarge image`                  |
+| `open-label`     | `Enlarge image: {name}`          |
 | `dialog-label`   | `Enlarged images`                |
 | `close-label`    | `Close`                          |
 | `previous-label` | `Previous image`                 |
@@ -244,9 +244,27 @@ need the same labels.
 | `position-label` | `{current} of {total}`           |
 
 Labels must contain non-whitespace text; `position-label` requires both
-placeholders. Displayed positions are one-based. Multi-image openers append
-the original image’s nonempty `alt` to `open-label`; single-image openers use
-the label alone.
+placeholders. Displayed positions are one-based.
+
+In `open-label`, every `{name}` is replaced with the original image’s accessible
+name, for both single images and galleries. Names come from `aria-labelledby`
+(referenced labels in ID order), then a nonempty `aria-label`, then `alt`, then
+`title` when `alt` is absent. Whitespace is normalized; an explicitly empty `alt`
+does not fall back to `title`. Names are inserted as plain text.
+Referenced labels preserve word boundaries at line breaks and use their own
+`title` when their content supplies no name. Labels hidden by themselves or
+ancestors can still supply text, including hidden descendants.
+Referenced content includes open shadow roots and assigned slots (or their
+fallback content), and button inputs supply their nonempty `value` before `title`.
+Embedded text inputs and textareas contribute their current values rather than
+their own labels. Block children retain word boundaries regardless of how they
+are named; inline fragments remain joined.
+For example, `open-label="View photo: {name}"` uses the image’s name in your
+own wording. Templates work in attributes and shared JSON, including translations.
+Overrides without `{name}` stay literal; gallery openers no longer append `alt`
+automatically. If the name is empty, the default becomes `Enlarge image`;
+custom templates substitute `image`, so translate that fallback explicitly
+with a literal label when needed.
 
 For shared labels, use an inline `script[type="application/json"]` with
 `data-img-enlarge-config`. An empty marker sets page defaults; a nonempty
@@ -276,7 +294,8 @@ for runnable configurations.
 | `refresh()`             | Closes the viewer and rebuilds image membership, openers, labels, and language. Preserves focus by original image identity when refreshing a focused opener or open viewer.                 |
 
 Call `refresh()` after adding, removing, or reordering images, editing an image
-link’s `href`/`type`, or changing dialog-only layout without a resize.
+link’s `href`/`type`, changing an image’s accessible name or referenced label text,
+or changing dialog-only layout without a resize.
 Membership isn’t automatically observed. Existing images’ sources and captions
 are reread on reopening.
 

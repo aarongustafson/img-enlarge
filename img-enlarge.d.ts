@@ -21,6 +21,8 @@ export interface ImgEnlargeErrorDetail {
  * The JSON accepts a flat label object or language-keyed dictionaries;
  * individual attributes override named labels, page labels, and built-in defaults,
  * in that order. Authored images stay in light DOM.
+ * Open-label templates replace {name} with each authored image's accessible name.
+ * Refresh after changing image names or referenced label text.
  * Explicit src/srcset override enclosing image links; otherwise image links
  * take precedence over inferred responsive candidates and the authored source.
  * The viewer preserves each authored image's referrerpolicy and crossorigin.

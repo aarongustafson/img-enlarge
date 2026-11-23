@@ -24,6 +24,87 @@ function append(
 }
 
 describe('img-enlarge', () => {
+	it.each([
+		['alt="Mountains"', 'Enlarge image: Mountains'],
+		[
+			'aria-labelledby="missing first second" aria-label="Ignored" alt="Ignored"',
+			'Enlarge image: Mountain trail',
+		],
+		[
+			'aria-labelledby="missing" aria-label="  Mountain   trail " alt="Ignored"',
+			'Enlarge image: Mountain trail',
+		],
+		['aria-label="  " alt="Mountains"', 'Enlarge image: Mountains'],
+		['title="Mountains"', 'Enlarge image: Mountains'],
+		['alt="" title="Ignored"', 'Enlarge image'],
+		['alt="  "', 'Enlarge image'],
+		['', 'Enlarge image'],
+		[
+			'aria-labelledby="empty" aria-label="Ignored" alt="Ignored"',
+			'Enlarge image',
+		],
+	])(
+		'uses the image name in a single-image default opener: %s',
+		async (attributes, label) => {
+			const element = append(
+				'',
+				`<span id="first" hidden> Mountain </span><span id="second">trail</span><span id="empty"></span><img src="/small.svg" ${attributes}>`,
+			);
+			await settle();
+			expect(
+				element
+					.querySelector('.img-enlarge-trigger')
+					.getAttribute('aria-label'),
+			).toBe(label);
+		},
+	);
+
+	it('substitutes every name placeholder as plain text without appending names to literal overrides', async () => {
+		const element = append(
+			'open-label="{name} — enlarge {name}"',
+			'<img src="/one.svg" alt="&lt;b&gt;$&amp; {name}&lt;/b&gt;"><img src="/two.svg" alt="">',
+		);
+		await settle();
+		const labels = () =>
+			[...element.querySelectorAll('.img-enlarge-trigger')].map(
+				(trigger) => trigger.getAttribute('aria-label'),
+			);
+		expect(labels()).toEqual([
+			'<b>$& {name}</b> — enlarge <b>$& {name}</b>',
+			'image — enlarge image',
+		]);
+		expect(element.querySelector('button b')).toBeNull();
+		element.setAttribute('open-label', 'Inspect photo');
+		await settle();
+		expect(labels()).toEqual(['Inspect photo', 'Inspect photo']);
+	});
+
+	it('resolves names per gallery image after merging localized and attribute templates, and rereads names on refresh', async () => {
+		configureLabels({ fr: { 'open-label': 'Agrandir : {name}' } });
+		configureLabels({ fr: { 'open-label': 'Voir : {name}' } }, 'photos');
+		const page = append('lang="fr"');
+		const gallery = append(
+			'lang="fr" name="photos"',
+			'<img src="/one.svg" alt="One"><img src="/two.svg" aria-label="Two" alt="Ignored">',
+		);
+		await settle();
+		expect(page.querySelector('button').getAttribute('aria-label')).toBe(
+			'Agrandir : Mountains',
+		);
+		expect(
+			[...gallery.querySelectorAll('button')].map((trigger) =>
+				trigger.getAttribute('aria-label'),
+			),
+		).toEqual(['Voir : One', 'Voir : Two']);
+		gallery.setAttribute('open-label', 'Détails : {name}');
+		await settle();
+		gallery.querySelector('img').alt = 'Updated';
+		gallery.refresh();
+		expect(gallery.querySelector('button').getAttribute('aria-label')).toBe(
+			'Détails : Updated',
+		);
+	});
+
 	it.each(['refresh', 'inactive', 'removed'])(
 		'rereads the requested image opener after a previous close callback: %s',
 		async (change) => {
@@ -499,7 +580,7 @@ describe('img-enlarge', () => {
 			'Agrandir',
 		);
 		expect(second.querySelector('button').getAttribute('aria-label')).toBe(
-			'Enlarge image',
+			'Enlarge image: Mountains',
 		);
 		first.open();
 		expect(document.querySelector('dialog').lang).toBe('FR-ca');
@@ -585,7 +666,7 @@ describe('img-enlarge', () => {
 		expect(image.getAttribute('srcset')).toBe('/small.svg 400w');
 		expect(element.querySelector('button').closest('a')).toBeNull();
 		expect(element.querySelector('button').getAttribute('aria-label')).toBe(
-			'Enlarge image',
+			'Enlarge image: Mountains',
 		);
 		element.open();
 		expect(element.querySelector('a').getAttribute('href')).toBe(
@@ -962,7 +1043,9 @@ describe('img-enlarge', () => {
 			document.head.querySelectorAll('style[data-img-enlarge]'),
 		).toHaveLength(1);
 		const trigger = element.querySelector('button');
-		expect(trigger.getAttribute('aria-label')).toBe('Enlarge image');
+		expect(trigger.getAttribute('aria-label')).toBe(
+			'Enlarge image: Mountains',
+		);
 		expect(trigger.querySelector('[aria-hidden="true"]').textContent).toBe(
 			'⤢',
 		);

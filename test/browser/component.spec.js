@@ -168,6 +168,268 @@ test.describe('multi-image wrappers', () => {
 	});
 });
 
+test('uses authored accessible names in default and translated opener templates', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const gallery = document.createElement('img-enlarge');
+		gallery.id = 'named-images';
+		gallery.setAttribute('force', '');
+		gallery.innerHTML =
+			'<span id="image-label" hidden>Mountain <strong>trail</strong></span><img src="/demo/mountains.svg" aria-labelledby="missing image-label" aria-label="Ignored" alt="Ignored" style="width:160px"><img src="/demo/bicycle.svg" aria-label="City bicycle" alt="Ignored" style="width:160px"><img src="/demo/bicycle.svg" alt="Basket" style="width:160px"><img src="/demo/bicycle.svg" title="Rear wheel" style="width:160px"><img src="/demo/bicycle.svg" alt="" title="Ignored" style="width:160px">';
+		document.body.append(gallery);
+	});
+	const gallery = page.locator('#named-images');
+	const names = ['Mountain trail', 'City bicycle', 'Basket', 'Rear wheel'];
+	for (const [index, name] of names.entries()) {
+		await expect(gallery.locator('img').nth(index)).toHaveAccessibleName(
+			name,
+		);
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName(`Enlarge image: ${name}`);
+	}
+	await expect(
+		gallery.locator('.img-enlarge-trigger').nth(4),
+	).toHaveAccessibleName('Enlarge image');
+	await gallery.evaluate((element) =>
+		element.setAttribute('open-label', 'Agrandir : {name}'),
+	);
+	for (const [index, name] of [...names, 'image'].entries()) {
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName(`Agrandir : ${name}`);
+	}
+	await gallery.locator('.img-enlarge-trigger').nth(1).click();
+	await expect(gallery.locator('.img-enlarge-close')).toBeFocused();
+	await page.keyboard.press('Escape');
+	await expect(gallery.locator('.img-enlarge-trigger').nth(1)).toBeFocused();
+});
+
+test('preserves line breaks, title fallbacks, and ancestor-hidden label content', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const gallery = document.createElement('img-enlarge');
+		gallery.id = 'referenced-names';
+		gallery.setAttribute('force', '');
+		gallery.innerHTML = `
+			<span id="line-break-label">Mountain<br>trail</span>
+			<button id="title-label" title="Mountains"><svg aria-hidden="true"></svg></button>
+			<div hidden><span id="ancestor-hidden-label">Mountain <span hidden>trail</span></span></div>
+			<div aria-hidden="true"><span id="aria-hidden-label">Mountain <span hidden>trail</span></span></div>
+			<div style="visibility:hidden"><span id="visible-label" style="visibility:visible">Mountain <span hidden>Excluded</span>trail</span></div>
+		`;
+		for (const label of [
+			'line-break-label',
+			'title-label',
+			'ancestor-hidden-label',
+			'aria-hidden-label',
+			'visible-label',
+		]) {
+			const image = document.createElement('img');
+			image.src = '/demo/mountains.svg';
+			image.alt = 'Ignored';
+			image.style.width = '160px';
+			image.setAttribute('aria-labelledby', label);
+			gallery.append(image);
+		}
+		document.body.append(gallery);
+	});
+	const gallery = page.locator('#referenced-names');
+	for (const [index, name] of [
+		'Mountain trail',
+		'Mountains',
+		'Mountain trail',
+		'Mountain trail',
+		'Mountain trail',
+	].entries()) {
+		await expect(gallery.locator('img').nth(index)).toHaveAccessibleName(
+			name,
+		);
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName(`Enlarge image: ${name}`);
+	}
+});
+
+test('includes hidden label content through a shadow-tree slot ancestor', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const host = document.createElement('div');
+		host.innerHTML =
+			'<span id="slotted-label">Mountain <span hidden>trail</span></span>';
+		host.attachShadow({ mode: 'open' }).innerHTML =
+			'<div hidden><slot></slot></div>';
+		document.body.append(host);
+		const element = document.createElement('img-enlarge');
+		element.id = 'slotted-image';
+		element.setAttribute('force', '');
+		element.innerHTML =
+			'<img src="/demo/mountains.svg" alt="Ignored" aria-labelledby="slotted-label" style="width:160px">';
+		document.body.append(element);
+	});
+	await expect(
+		page.locator('#slotted-image .img-enlarge-trigger'),
+	).toHaveAccessibleName('Enlarge image: Mountain trail');
+});
+
+test('uses shadow content, assigned slots, and slot fallback text in referenced names', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const gallery = document.createElement('img-enlarge');
+		gallery.id = 'shadow-names';
+		gallery.setAttribute('force', '');
+		for (const [index, [shadow, light, hidden]] of [
+			['<span>Mountain trail</span>', 'Ignored light content', false],
+			[
+				'Mountain <slot>Ignored fallback</slot>',
+				'<span>trail</span><span hidden>Ignored</span>',
+				false,
+			],
+			['Mountain <slot>trail</slot>', '', false],
+			['Mountain <slot><span hidden>trail</span></slot>', '', true],
+		].entries()) {
+			const host = document.createElement('div');
+			host.id = `shadow-name-${index}`;
+			host.hidden = hidden;
+			host.innerHTML = light;
+			host.attachShadow({ mode: 'open' }).innerHTML = shadow;
+			gallery.append(host);
+			const image = document.createElement('img');
+			image.src = '/demo/mountains.svg';
+			image.alt = 'Ignored';
+			image.style.width = '160px';
+			image.setAttribute('aria-labelledby', host.id);
+			gallery.append(image);
+		}
+		document.body.append(gallery);
+	});
+	const gallery = page.locator('#shadow-names');
+	for (let index = 0; index < 4; index++) {
+		await expect(gallery.locator('img').nth(index)).toHaveAccessibleName(
+			'Mountain trail',
+		);
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName('Enlarge image: Mountain trail');
+	}
+});
+
+test('uses referenced button-input values before title fallbacks', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const gallery = document.createElement('img-enlarge');
+		gallery.id = 'input-names';
+		gallery.setAttribute('force', '');
+		gallery.innerHTML = `
+			<input id="button-name" type="button" value="Mountains" title="Ignored">
+			<input id="submit-name" type="submit" value="Mountains" title="Ignored">
+			<input id="reset-name" type="reset" value="Mountains" title="Ignored">
+			<input id="empty-button-name" type="button" value="" title="Mountain trail">
+			<input id="aria-button-name" type="button" value="Ignored" aria-label="Mountain trail">
+		`;
+		for (const label of [
+			'button-name',
+			'submit-name',
+			'reset-name',
+			'empty-button-name',
+			'aria-button-name',
+		]) {
+			const image = document.createElement('img');
+			image.src = '/demo/mountains.svg';
+			image.alt = 'Ignored';
+			image.style.width = '160px';
+			image.setAttribute('aria-labelledby', label);
+			gallery.append(image);
+		}
+		document.body.append(gallery);
+	});
+	const gallery = page.locator('#input-names');
+	for (const [index, name] of [
+		'Mountains',
+		'Mountains',
+		'Mountains',
+		'Mountain trail',
+		'Mountain trail',
+	].entries()) {
+		await expect(gallery.locator('img').nth(index)).toHaveAccessibleName(
+			name,
+		);
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName(`Enlarge image: ${name}`);
+	}
+});
+
+test('uses current embedded textbox values and preserves directly named block boundaries', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const gallery = document.createElement('img-enlarge');
+		gallery.id = 'embedded-names';
+		gallery.setAttribute('force', '');
+		gallery.innerHTML = `
+			<span id="text-control-label">Mountain <input type="text" value="Old" aria-label="Ignored" title="Ignored"></span>
+			<span id="textarea-label">Mountain <textarea aria-label="Ignored" title="Ignored">Old</textarea></span>
+			<span id="empty-text-label">Mountain<input type="text" value="" aria-label="Ignored" title="Ignored"></span>
+			<span id="block-label"><div role="img" aria-label="Mountain"></div><div role="img" aria-label="trail"></div></span>
+			<span id="inline-label"><span role="img" aria-label="Moun"></span><span role="img" aria-label="tain"></span></span>
+		`;
+		gallery.querySelector('input').value = 'trail';
+		gallery.querySelector('textarea').value = 'trail';
+		for (const label of [
+			'text-control-label',
+			'textarea-label',
+			'empty-text-label',
+			'block-label',
+			'inline-label',
+		]) {
+			const image = document.createElement('img');
+			image.src = '/demo/mountains.svg';
+			image.alt = 'Ignored';
+			image.style.width = '160px';
+			image.setAttribute('aria-labelledby', label);
+			gallery.append(image);
+		}
+		document.body.append(gallery);
+	});
+	const gallery = page.locator('#embedded-names');
+	for (const [index, name] of [
+		'Mountain trail',
+		'Mountain trail',
+		'Mountain',
+		'Mountain trail',
+		'Mountain',
+	].entries()) {
+		await expect(gallery.locator('img').nth(index)).toHaveAccessibleName(
+			name,
+		);
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName(`Enlarge image: ${name}`);
+	}
+	await gallery.evaluate((element) => {
+		element.querySelector('input').value = 'path';
+		element.refresh();
+	});
+	await expect(gallery.locator('img').first()).toHaveAccessibleName(
+		'Mountain path',
+	);
+	await expect(
+		gallery.locator('.img-enlarge-trigger').first(),
+	).toHaveAccessibleName('Enlarge image: Mountain path');
+});
+
 test('demo navigation preserves unclipped native focus', async ({ page }) => {
 	await serve(page);
 	await expectNativeFocus(page.locator('header a').first());
@@ -1018,7 +1280,9 @@ for (const controls of ['auto', 'buttons']) {
 		await expect(trigger).toHaveAccessibleName('Agrandir le paysage');
 		await expect(
 			page.locator('#localized-detail .img-enlarge-trigger'),
-		).toHaveAccessibleName('Agrandir la photo');
+		).toHaveAccessibleName(
+			'Agrandir la photo : Un vélo rouge avec un panier.',
+		);
 		await trigger.click();
 		const dialog = page.getByRole('dialog', { name: 'Images agrandies' });
 		await expect(dialog).toHaveAttribute('lang', 'fr-CA');
@@ -1320,7 +1584,9 @@ test('uses flat page labels without language-code keys and refreshes edited JSON
 	await serve(page);
 	await page.goto('http://enlarge.test/demo/labels-flat.html');
 	const trigger = page.locator('#flat-first .img-enlarge-trigger');
-	await expect(trigger).toHaveAccessibleName('Agrandir l’image');
+	await expect(trigger).toHaveAccessibleName(
+		'Agrandir l’image : Un vélo rouge avec un panier.',
+	);
 	await trigger.click();
 	const dialog = page.getByRole('dialog', { name: 'Images agrandies' });
 	await expect(dialog).toHaveAttribute('lang', 'fr');
@@ -1590,7 +1856,9 @@ test('carries styles without an author stylesheet link and positions icon contro
 		.locator('#mountains')
 		.evaluate((element) => element.setAttribute('controls', 'buttons'));
 	const trigger = page.locator('#mountains .img-enlarge-trigger');
-	await expect(trigger).toHaveAccessibleName('Enlarge image');
+	await expect(trigger).toHaveAccessibleName(
+		'Enlarge image: A trail between two green mountains beneath a golden sun.',
+	);
 	const imageBox = await page
 		.locator('#mountains > figure img')
 		.boundingBox();
