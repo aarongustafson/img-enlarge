@@ -24,6 +24,10 @@ The component uses light DOM, includes default styles, and has no runtime depend
 npm install @aarongustafson/img-enlarge
 ```
 
+## Usage
+
+### Option 1: Register automatically
+
 Import the registration module:
 
 ```js
@@ -38,6 +42,8 @@ For a plain HTML page, use a module script:
   src="https://unpkg.com/@aarongustafson/img-enlarge/define.js?module"
 ></script>
 ```
+
+### Option 2: Import the class and register manually
 
 The package root exports the class without registering it:
 
@@ -56,7 +62,7 @@ If your Content Security Policy requires a style nonce, set `nonce` on the first
 component before it connects. A blocked stylesheet emits a configuration error
 and leaves the authored content unenhanced.
 
-## Usage
+### Basic example
 
 Wrap one or more images, including images inside `<picture>`, figures, or links:
 
@@ -75,42 +81,121 @@ Put image links inside the component, not around it. Image clicks still follow
 the link; the separate Enlarge button opens the viewer. Nested components own
 their own images.
 
+Use the Enlarge button to open the image. Close or Escape returns focus to that
+button. Without JavaScript, the original image and any link remain available.
+
+### Use a different enlarged image
+
+Set `src` on the component when the thumbnail and enlargement use different files:
+
+```html
+<img-enlarge src="./trail-large.jpg">
+  <img
+    src="./trail.jpg"
+    width="800"
+    height="400"
+    alt="A narrow trail between green mountains."
+  />
+</img-enlarge>
+```
+
+The thumbnail stays unchanged. Alternatively, put a link to the larger image
+inside the wrapper or keep responsive sources on the image. See the
+[source examples](https://aarongustafson.github.io/img-enlarge/demo/#responsive-sources-example)
+for links, `<picture>`, and separate viewer `srcset` options.
+
+### Add a caption
+
+An image inside a `<figure>` uses its `<figcaption>` in the viewer. Set `caption`
+on the component to use different text:
+
+```html
+<img-enlarge caption="An afternoon on the mountain trail.">
+  <figure>
+    <img src="./trail.jpg" alt="A narrow trail between green mountains." />
+    <figcaption>A view from the trail.</figcaption>
+  </figure>
+</img-enlarge>
+```
+
+The original caption stays in place. Set `caption=""` to omit the viewer caption.
+Captions are plain text; keep meaningful alternative text on the image.
+
+### Connect images in a gallery
+
+Put several images in one wrapper, or give separate wrappers the same `name`:
+
+```html
+<img-enlarge name="ride">
+  <img src="./trail.jpg" alt="A narrow trail between green mountains." />
+</img-enlarge>
+<img-enlarge name="ride">
+  <img src="./bicycle.jpg" alt="A red bicycle with a front basket." />
+</img-enlarge>
+```
+
+Open either image to start there. Previous/Next buttons and the Left/Right keys
+move through the gallery without wrapping. A wrapper without a `name` opens only
+its own images. See the
+[gallery examples](https://aarongustafson.github.io/img-enlarge/demo/#gallery-examples)
+for both arrangements and navigation options.
+
 ## Behavior
 
-- **Eligibility:** each image gets a button when the styled viewer can paint it
-  more than one CSS pixel wider or taller. Resizing and image loading update
-  eligibility. Inferred responsive sources also need a larger candidate available.
-  Use `force` to bypass these checks, including for art-directed enlargements.
-  A focused opener remains until focus leaves; an open viewer keeps its opener.
-- **Sources:** keep thumbnail `src`, `srcset`, and `sizes` on the authored image.
-  Viewer sources use component `src`/`srcset` overrides, then an enclosing image
-  link, then inferred responsive candidates, then `currentSrc`/`src`.
-  Ambiguous candidates use the fallback source. Image links need an image MIME
-  `type` or a recognized image-file extension; use explicit `src` otherwise.
-  A non-image `type` prevents link inference.
-  Viewer `sizes` describes the enlarged image, not the thumbnail.
-  URLs accept HTTP(S), blob, and image data URLs. The viewer preserves authored
-  `referrerpolicy` and `crossorigin`.
-- **Galleries:** an unnamed wrapper opens only its own images. Matching,
-  nonempty, case-sensitive `name` values connect wrappers and groups in image
-  document order. Invalid or hidden/inert members are excluded. Each opening
-  snapshots the collection; clicking an opener starts at that image.
-- **Navigation:** Previous/Next, Left/Right keys, and scrolling navigate without
-  wrapping. Arrow directions follow the opener’s text direction. `controls="auto"`
-  uses native CSS scroll buttons when supported, otherwise HTML buttons.
-  `controls="buttons"` forces HTML buttons. Single-image viewers have no arrows.
-- **Captions:** alternative text comes from the original image’s `alt`.
-  Captions come from `caption`, then an enclosing figure’s `figcaption`; an empty
-  `caption` suppresses the fallback. Captions are plain text, separate from alt
-  text, and retain their source language.
-- **Loading and errors:** only visited enlarged images load. Visible status
-  reports position, loading, and errors. Failed images retain their reserved
-  space and native fallback rendering; Retry and Close remain available.
-  Invalid configuration leaves authored content unenhanced and emits an error.
-- **Focus and closing:** Close receives initial focus; the native modal contains
-  keyboard focus. Escape or Close dismisses it and restores the original opener.
-  Backdrop clicks don’t dismiss it. Only one viewer is open per document.
-  If you remove or hide the opener, manage the next useful focus location.
+### When the Enlarge button appears
+
+Each image gets a button when the styled viewer can paint it
+more than one CSS pixel wider or taller. Resizing and image loading update
+eligibility. Inferred responsive sources also need a larger candidate available.
+Use `force` to bypass these checks, including for art-directed enlargements.
+A focused opener remains until focus leaves; an open viewer keeps its opener.
+
+### Choosing the enlarged image
+
+Keep thumbnail `src`, `srcset`, and `sizes` on the authored image.
+Viewer sources use component `src`/`srcset` overrides, then an enclosing image
+link, then inferred responsive candidates, then `currentSrc`/`src`.
+Ambiguous candidates use the fallback source. Image links need an image MIME
+`type` or a recognized image-file extension; use explicit `src` otherwise.
+A non-image `type` prevents link inference.
+Viewer `sizes` describes the enlarged image, not the thumbnail.
+URLs accept HTTP(S), blob, and image data URLs. The viewer preserves authored
+`referrerpolicy` and `crossorigin`.
+
+### Gallery membership
+
+An unnamed wrapper opens only its own images. Matching,
+nonempty, case-sensitive `name` values connect wrappers and groups in image
+document order. Invalid or hidden/inert members are excluded. Each opening
+snapshots the collection; clicking an opener starts at that image.
+
+### Navigation
+
+Previous/Next, Left/Right keys, and scrolling navigate without
+wrapping. Arrow directions follow the opener’s text direction. `controls="auto"`
+uses native CSS scroll buttons when supported, otherwise HTML buttons.
+`controls="buttons"` forces HTML buttons. Single-image viewers have no arrows.
+
+### Captions and alternative text
+
+Alternative text comes from the original image’s `alt`.
+Captions come from `caption`, then an enclosing figure’s `figcaption`; an empty
+`caption` suppresses the fallback. Captions are plain text, separate from alt
+text, and retain their source language.
+
+### Loading and errors
+
+Only visited enlarged images load. Visible status
+reports position, loading, and errors. Failed images retain their reserved
+space and native fallback rendering; Retry and Close remain available.
+Invalid configuration leaves authored content unenhanced and emits an error.
+
+### Focus and closing
+
+Close receives initial focus; the native modal contains
+keyboard focus. Escape or Close dismisses it and restores the original opener.
+Backdrop clicks don’t dismiss it. Only one viewer is open per document.
+If you remove or hide the opener, manage the next useful focus location.
 
 ## Attributes
 
@@ -133,6 +218,18 @@ microtask and close its open viewer.
 ## Labels and localization
 
 Every generated label can be rewritten or translated:
+
+For a one-off change, use label attributes on the wrapper:
+
+```html
+<img-enlarge open-label="View the trail photo" close-label="Back to the page">
+  <img src="./trail.jpg" alt="A narrow trail between green mountains." />
+</img-enlarge>
+```
+
+The same attributes accept translated text. Set the appropriate `lang` on the
+wrapper or an ancestor; use shared JSON configuration when several wrappers
+need the same labels.
 
 | Attribute        | Default                          |
 | ---------------- | -------------------------------- |

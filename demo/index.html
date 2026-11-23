@@ -54,10 +54,9 @@
 					normally.
 				</p>
 				<p>
-					The component treats <code>img</code> and
-					<code>picture</code>
-					elements as equally valid images to enlarge. More on that
-					shortly.
+					Images inside <code>picture</code>, figures, and links work
+					too. The examples below show how to choose a different
+					enlargement, add captions, and connect images in a gallery.
 				</p>
 				<div class="code-demo-pair">
 					<micro-lighter
@@ -91,8 +90,8 @@
 			<section class="demo-section" id="force-example">
 				<h2>Force enlargement</h2>
 				<p>
-					Add the <code>force</code> attribute to bypass the space
-					checker and always show the Enlarge button.
+					Add <code>force</code> to show the Enlarge button even when
+					the image can’t appear larger in the viewer.
 				</p>
 				<div class="code-demo-pair">
 					<micro-lighter
@@ -104,8 +103,7 @@
 						<pre
 							aria-label="Force enlargement code"
 							tabindex="0"
-						><code>
-<mark>&lt;img-enlarge force&gt;</mark>
+						><code><mark>&lt;img-enlarge force&gt;</mark>
   &lt;img src="./mountains.svg"
     alt="A trail between two green mountains beneath a golden sun."&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
@@ -129,57 +127,60 @@
 					link to a larger file, let the browser choose from
 					responsive images, or supply a separate enlargement.
 				</p>
-				<h3>Use an existing image link</h3>
-				<p>
-					Link the image to a larger file. The Enlarge button uses
-					that file, while clicking the thumbnail still follows the
-					link.
-				</p>
-				<div class="code-demo-pair">
-					<micro-lighter
-						class="code-panel"
-						language="html"
-						controls="copy"
-						data-label="HTML"
-					>
-						<pre
-							aria-label="Choose the enlarged image code 4"
-							tabindex="0"
-						><code><mark>&lt;img-enlarge&gt;</mark>
+				<section id="linked-image-example">
+					<h3>Use an existing image link</h3>
+					<p>
+						Link the image to a larger file. The Enlarge button uses
+						that file, while clicking the thumbnail still follows
+						the link.
+					</p>
+					<div class="code-demo-pair">
+						<micro-lighter
+							class="code-panel"
+							language="html"
+							controls="copy"
+							data-label="HTML"
+						>
+							<pre
+								aria-label="Choose the enlarged image code 4"
+								tabindex="0"
+							><code><mark>&lt;img-enlarge&gt;</mark>
   &lt;a <mark>href="./mountains-large.svg"</mark>&gt;
     &lt;img src="./mountains.svg" alt="A trail between green mountains."&gt;
   &lt;/a&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
-					</micro-lighter>
-					<div class="demo" data-demo-label="Live example">
-						<img-enlarge id="linked-source">
-							<a href="./mountains-large.svg"
-								><img
-									src="./mountains.svg"
-									width="800"
-									height="400"
-									alt="A trail between green mountains."
-							/></a>
-						</img-enlarge>
+						</micro-lighter>
+						<div class="demo" data-demo-label="Live example">
+							<img-enlarge id="linked-source">
+								<a href="./mountains-large.svg"
+									><img
+										src="./mountains.svg"
+										width="800"
+										height="400"
+										alt="A trail between green mountains."
+								/></a>
+							</img-enlarge>
+						</div>
 					</div>
-				</div>
-				<h3>Let the browser choose the larger image</h3>
-				<p>
-					Keep <code>srcset</code> and <code>sizes</code> on the image
-					and let the browser choose a larger candidate for the
-					viewer.
-				</p>
-				<div class="code-demo-pair">
-					<micro-lighter
-						class="code-panel"
-						language="html"
-						controls="copy"
-						data-label="HTML"
-					>
-						<pre
-							aria-label="Choose the enlarged image code 5"
-							tabindex="0"
-						><code><mark>&lt;img-enlarge class="responsive-thumbnail"&gt;</mark>
+				</section>
+				<section id="responsive-image-example">
+					<h3>Let the browser choose the larger image</h3>
+					<p>
+						Keep <code>srcset</code> and <code>sizes</code> on the
+						image and let the browser choose a larger candidate for
+						the viewer.
+					</p>
+					<div class="code-demo-pair">
+						<micro-lighter
+							class="code-panel"
+							language="html"
+							controls="copy"
+							data-label="HTML"
+						>
+							<pre
+								aria-label="Choose the enlarged image code 5"
+								tabindex="0"
+							><code><mark>&lt;img-enlarge class="responsive-thumbnail"&gt;</mark>
   &lt;img src="./mountains.svg?responsive=small"
     <mark>srcset="./mountains.svg?responsive=small 800w,
       ./mountains-large.svg?responsive=large 1200w"
@@ -193,153 +194,176 @@
   inline-size: min(100%, 12rem);
 }</mark>
 &lt;/style&gt;</code></pre>
-					</micro-lighter>
-					<div class="demo" data-demo-label="Live example">
-						<img-enlarge
-							id="responsive-source"
-							class="responsive-thumbnail"
-						>
-							<img
-								src="./mountains.svg?responsive=small"
-								srcset="
-									./mountains.svg?responsive=small        800w,
-									./mountains-large.svg?responsive=large 1200w
-								"
-								sizes="192px"
-								width="800"
-								height="400"
-								alt="A trail between green mountains."
-							/>
-						</img-enlarge>
+						</micro-lighter>
+						<div class="demo" data-demo-label="Live example">
+							<img-enlarge
+								id="responsive-source"
+								class="responsive-thumbnail"
+							>
+								<img
+									src="./mountains.svg?responsive=small"
+									srcset="
+										./mountains.svg?responsive=small        800w,
+										./mountains-large.svg?responsive=large 1200w
+									"
+									sizes="192px"
+									width="800"
+									height="400"
+									alt="A trail between green mountains."
+								/>
+							</img-enlarge>
+						</div>
 					</div>
-				</div>
-				<h3>Use the <code>&lt;picture&gt;</code> element</h3>
-				<p>
-					A <code>picture</code> can use different images at different
-					window widths. Resize the window to try this example. The
-					component will identify which
-					<code>&lt;source&gt;</code> the browser chose and uses its
-					image sizes.
-				</p>
-				<div class="code-demo-pair">
-					<micro-lighter
-						class="code-panel"
-						language="html"
-						controls="copy"
-						data-label="HTML"
-					>
-						<pre
-							aria-label="Choose the enlarged image code 6"
-							tabindex="0"
-						><code><mark>&lt;img-enlarge class="responsive-thumbnail"&gt;</mark>
+				</section>
+				<section id="picture-example">
+					<h3>Use the <code>&lt;picture&gt;</code> element</h3>
+					<p>
+						A <code>picture</code> can use different images at
+						different window widths. Resize the window to try this
+						example. The enlargement uses the responsive source
+						chosen for that image.
+					</p>
+					<div class="code-demo-pair">
+						<micro-lighter
+							class="code-panel"
+							language="html"
+							controls="copy"
+							data-label="HTML"
+						>
+							<pre
+								aria-label="Choose the enlarged image code 6"
+								tabindex="0"
+							><code><mark>&lt;img-enlarge class="responsive-thumbnail"&gt;</mark>
   &lt;picture&gt;
     &lt;source media="(min-width: 40rem)"
       <mark>srcset="./mountains.svg?picture=small 800w,
         ./mountains-large.svg?picture=large 1200w" sizes="192px"</mark>&gt;
-    &lt;img src="./mountains.svg" alt="A trail between green mountains."&gt;
+    &lt;img src="./mountains.svg" width="800" height="400"
+      alt="A trail between green mountains."&gt;
   &lt;/picture&gt;
-<mark>&lt;/img-enlarge&gt;</mark></code></pre>
-					</micro-lighter>
-					<div class="demo" data-demo-label="Live example">
-						<img-enlarge
-							id="picture-source"
-							class="responsive-thumbnail"
+<mark>&lt;/img-enlarge&gt;</mark>
+
+&lt;style&gt;
+<mark>.responsive-thumbnail &gt; picture &gt; img {
+  inline-size: min(100%, 12rem);
+}</mark>
+&lt;/style&gt;</code></pre>
+						</micro-lighter>
+						<div class="demo" data-demo-label="Live example">
+							<img-enlarge
+								id="picture-source"
+								class="responsive-thumbnail"
+							>
+								<picture>
+									<source
+										media="(min-width: 40rem)"
+										srcset="
+											./mountains.svg?picture=small        800w,
+											./mountains-large.svg?picture=large 1200w
+										"
+										sizes="192px"
+									/>
+									<img
+										src="./mountains.svg"
+										width="800"
+										height="400"
+										alt="A trail between green mountains."
+									/>
+								</picture>
+							</img-enlarge>
+						</div>
+					</div>
+				</section>
+				<section id="explicit-source-example">
+					<h3>Enlarge a specific image</h3>
+					<p>
+						Set <code>src</code> on the component when you want a
+						different enlarged image without adding a link. It takes
+						priority over the image’s link and responsive sources.
+					</p>
+					<div class="code-demo-pair">
+						<micro-lighter
+							class="code-panel"
+							language="html"
+							controls="copy"
+							data-label="HTML"
 						>
-							<picture>
-								<source
-									media="(min-width: 40rem)"
-									srcset="
-										./mountains.svg?picture=small        800w,
-										./mountains-large.svg?picture=large 1200w
-									"
-									sizes="192px"
-								/>
+							<pre
+								aria-label="Choose the enlarged image code 7"
+								tabindex="0"
+							><code><mark>&lt;img-enlarge src="./mountains-large.svg"&gt;</mark>
+  &lt;img src="./mountains.svg" alt="A trail between green mountains."&gt;
+<mark>&lt;/img-enlarge&gt;</mark></code></pre>
+						</micro-lighter>
+						<div class="demo" data-demo-label="Live example">
+							<img-enlarge
+								id="explicit-source"
+								src="./mountains-large.svg"
+							>
 								<img
 									src="./mountains.svg"
 									width="800"
 									height="400"
 									alt="A trail between green mountains."
 								/>
-							</picture>
-						</img-enlarge>
+							</img-enlarge>
+						</div>
 					</div>
-				</div>
-				<h3>Enlarge a specific image</h3>
-				<p>
-					Set <code>src</code> on the component when you want a
-					different enlarged image without adding a link. It takes
-					priority over the image’s link and responsive sources.
-				</p>
-				<div class="code-demo-pair">
-					<micro-lighter
-						class="code-panel"
-						language="html"
-						controls="copy"
-						data-label="HTML"
-					>
-						<pre
-							aria-label="Choose the enlarged image code 7"
-							tabindex="0"
-						><code><mark>&lt;img-enlarge src="./mountains-large.svg"&gt;</mark>
-  &lt;img src="./mountains.svg" alt="A trail between green mountains."&gt;
-<mark>&lt;/img-enlarge&gt;</mark></code></pre>
-					</micro-lighter>
-					<div class="demo" data-demo-label="Live example">
-						<img-enlarge
-							id="explicit-source"
-							src="./mountains-large.svg"
+				</section>
+				<section id="viewer-srcset-example">
+					<h3>Declare several enlargement options</h3>
+					<p>
+						Use <code>srcset</code> on the component to give the
+						viewer its own choice of image sizes. The thumbnail
+						keeps its separate <code>srcset</code> and
+						<code>sizes</code>.
+					</p>
+					<div class="code-demo-pair">
+						<micro-lighter
+							class="code-panel"
+							language="html"
+							controls="copy"
+							data-label="HTML"
 						>
-							<img
-								src="./mountains.svg"
-								width="800"
-								height="400"
-								alt="A trail between green mountains."
-							/>
-						</img-enlarge>
-					</div>
-				</div>
-				<h3>Declare several enlargement options</h3>
-				<p>
-					Use <code>srcset</code> on the component to give the viewer
-					its own choice of image sizes. The thumbnail keeps its
-					separate <code>srcset</code> and <code>sizes</code>.
-				</p>
-				<div class="code-demo-pair">
-					<micro-lighter
-						class="code-panel"
-						language="html"
-						controls="copy"
-						data-label="HTML"
-					>
-						<pre
-							aria-label="Choose the enlarged image code 8"
-							tabindex="0"
-						><code><mark>&lt;img-enlarge src="./mountains-large.svg"
+							<pre
+								aria-label="Choose the enlarged image code 8"
+								tabindex="0"
+							><code><mark>&lt;img-enlarge class="responsive-thumbnail" src="./mountains-large.svg"
   srcset="./mountains.svg?viewer=small 800w,
     ./mountains-large.svg?viewer=large 1200w"&gt;</mark>
   &lt;img src="./mountains.svg?thumbnail=small"
     srcset="./mountains.svg?thumbnail=small 800w"
-    sizes="192px" alt="A trail between green mountains."&gt;
-<mark>&lt;/img-enlarge&gt;</mark></code></pre>
-					</micro-lighter>
-					<div class="demo" data-demo-label="Live example">
-						<img-enlarge
-							id="explicit-responsive-source"
-							class="responsive-thumbnail"
-							src="./mountains-large.svg"
-							srcset="./mountains.svg?viewer=small 800w, ./mountains-large.svg?viewer=large 1200w"
-						>
-							<img
-								src="./mountains.svg?thumbnail=small"
-								srcset="./mountains.svg?thumbnail=small 800w"
-								sizes="192px"
-								width="800"
-								height="400"
-								alt="A trail between green mountains."
-							/>
-						</img-enlarge>
+    sizes="192px" width="800" height="400"
+    alt="A trail between green mountains."&gt;
+<mark>&lt;/img-enlarge&gt;</mark>
+
+&lt;style&gt;
+<mark>.responsive-thumbnail &gt; img {
+  inline-size: min(100%, 12rem);
+}</mark>
+&lt;/style&gt;</code></pre>
+						</micro-lighter>
+						<div class="demo" data-demo-label="Live example">
+							<img-enlarge
+								id="explicit-responsive-source"
+								class="responsive-thumbnail"
+								src="./mountains-large.svg"
+								srcset="./mountains.svg?viewer=small 800w, ./mountains-large.svg?viewer=large 1200w"
+							>
+								<img
+									src="./mountains.svg?thumbnail=small"
+									srcset="
+										./mountains.svg?thumbnail=small 800w
+									"
+									sizes="192px"
+									width="800"
+									height="400"
+									alt="A trail between green mountains."
+								/>
+							</img-enlarge>
+						</div>
 					</div>
-				</div>
+				</section>
 				<p>
 					See the
 					<a href="../README.md#behavior"
@@ -349,8 +373,7 @@
 				</p>
 			</section>
 			<section class="demo-section" id="attributes-example">
-				<h2>Other attributes</h2>
-				<h3>Captions</h3>
+				<h2>Captions</h2>
 				<p>
 					Put the image in a <code>figure</code> with a
 					<code>figcaption</code> and the enlargement will use that
@@ -403,67 +426,72 @@
 					attribute on the component for a one-off change, or use a
 					JSON configuration for shared labels.
 				</p>
-				<h3>Rewrite a label</h3>
-				<p>
-					This version rewrites the label of the open &amp; close
-					buttons using the associated
-					<code>*-label</code> attributes.
-				</p>
-				<div class="code-demo-pair">
-					<micro-lighter
-						class="code-panel"
-						language="html"
-						controls="copy"
-						data-label="HTML"
-					>
-						<pre
-							aria-label="Rewrite the control labels code"
-							tabindex="0"
-						><code><mark>&lt;img-enlarge open-label="View the trail photo"
+				<section id="rewrite-labels-example">
+					<h3>Rewrite a label</h3>
+					<p>
+						Set <code>open-label</code> and <code>close-label</code>
+						to use your application’s wording for the two buttons.
+					</p>
+					<div class="code-demo-pair">
+						<micro-lighter
+							class="code-panel"
+							language="html"
+							controls="copy"
+							data-label="HTML"
+						>
+							<pre
+								aria-label="Rewrite the control labels code"
+								tabindex="0"
+							><code><mark>&lt;img-enlarge open-label="View the trail photo"
   close-label="Back to the page"&gt;</mark>
   &lt;img src="./mountains.svg" alt="A trail between green mountains."&gt;
 <mark>&lt;/img-enlarge&gt;</mark></code></pre>
-					</micro-lighter>
-					<div class="demo" data-demo-label="Live example">
-						<img-enlarge
-							id="rewritten-labels"
-							open-label="View the trail photo"
-							close-label="Back to the page"
-						>
-							<img
-								src="./mountains.svg"
-								width="800"
-								height="400"
-								alt="A trail between green mountains."
-							/>
-						</img-enlarge>
+						</micro-lighter>
+						<div class="demo" data-demo-label="Live example">
+							<img-enlarge
+								id="rewritten-labels"
+								open-label="View the trail photo"
+								close-label="Back to the page"
+							>
+								<img
+									src="./mountains.svg"
+									width="800"
+									height="400"
+									alt="A trail between green mountains."
+								/>
+							</img-enlarge>
+						</div>
 					</div>
-				</div>
-				<h3>Translate the labels</h3>
-				<p>
-					You can also translate every control and status message
-					using a global JSON config. This example adds Canadian
-					French labels to a French gallery:
-					<code>fr-CA</code> supplies the Enlarge label, and
-					<code>fr</code> supplies the rest.
-					<code>data-img-enlarge-config="french"</code> limits these
-					labels to images with <code>name="french"</code>.
-				</p>
-				<p>
-					For a page in one language, review the
-					<a href="./labels-flat.html">single-language example</a>.
-				</p>
-				<div class="code-demo-pair">
-					<micro-lighter
-						class="code-panel"
-						language="html"
-						controls="copy"
-						data-label="HTML"
-					>
-						<pre
-							aria-label="Translate the controls code 13"
-							tabindex="0"
-						><code><mark>&lt;script type="application/json" data-img-enlarge-config="french"&gt;
+				</section>
+				<section id="translate-labels-example">
+					<h3>Translate the labels</h3>
+					<p>
+						You can also translate every control and status message
+						using shared JSON. Here,
+						<code>data-img-enlarge-config="french"</code> applies
+						the labels only to the gallery named
+						<code>french</code>. The Canadian French
+						<code>fr-CA</code> entry changes the Enlarge label;
+						<code>fr</code> supplies the other labels. The first
+						image overrides that shared Enlarge label with
+						<code>open-label="Agrandir le paysage"</code>.
+					</p>
+					<p>
+						For a page in one language, review the
+						<a href="./labels-flat.html">single-language example</a
+						>.
+					</p>
+					<div class="code-demo-pair">
+						<micro-lighter
+							class="code-panel"
+							language="html"
+							controls="copy"
+							data-label="HTML"
+						>
+							<pre
+								aria-label="Translate the controls code 13"
+								tabindex="0"
+							><code><mark>&lt;script type="application/json" data-img-enlarge-config="french"&gt;
 {
   "fr": {
     "open-label": "Agrandir l’image",
@@ -481,68 +509,77 @@
 &lt;/script&gt;</mark>
 
 &lt;div lang="fr-CA"&gt;
-  <mark>&lt;img-enlarge name="french" open-label="Agrandir le paysage"&gt;</mark>
+  <mark>&lt;img-enlarge name="french" open-label="Agrandir le paysage"
+    caption="Un sentier entre les montagnes."&gt;</mark>
     &lt;img src="./mountains.svg" alt="Un sentier entre deux montagnes vertes."&gt;
   <mark>&lt;/img-enlarge&gt;</mark>
-  <mark>&lt;img-enlarge name="french"&gt;</mark>
+  <mark>&lt;img-enlarge name="french" caption="Un vélo pour la promenade."&gt;</mark>
     &lt;img src="./bicycle.svg" alt="Un vélo rouge avec un panier."&gt;
   <mark>&lt;/img-enlarge&gt;</mark>
 &lt;/div&gt;</code></pre>
-					</micro-lighter>
-					<div
-						class="demo collection-thumbnails"
-						data-demo-label="Live example"
-						lang="fr-CA"
-					>
-						<script
-							type="application/json"
-							data-img-enlarge-config="french"
+						</micro-lighter>
+						<div
+							class="demo collection-thumbnails"
+							data-demo-label="Live example"
+							lang="fr-CA"
 						>
-							{
-								"fr": {
-									"open-label": "Agrandir l’image",
-									"dialog-label": "Images agrandies",
-									"close-label": "Fermer",
-									"previous-label": "Image précédente",
-									"next-label": "Image suivante",
-									"loading-label": "Chargement de l’image",
-									"error-label": "Impossible de charger l’image.",
-									"retry-label": "Réessayer",
-									"position-label": "{current} sur {total}"
-								},
-								"fr-CA": { "open-label": "Agrandir la photo" }
-							}
-						</script>
-						<img-enlarge
-							id="localized"
-							name="french"
-							open-label="Agrandir le paysage"
-							caption="Un sentier entre les montagnes."
-						>
-							<img
-								src="./mountains.svg"
-								width="800"
-								height="400"
-								alt="Un sentier entre deux montagnes vertes."
-							/>
-						</img-enlarge>
-						<img-enlarge
-							id="localized-detail"
-							name="french"
-							caption="Un vélo pour la promenade."
-						>
-							<img
-								src="./bicycle.svg"
-								width="640"
-								height="360"
-								alt="Un vélo rouge avec un panier."
-							/>
-						</img-enlarge>
+							<script
+								type="application/json"
+								data-img-enlarge-config="french"
+							>
+								{
+									"fr": {
+										"open-label": "Agrandir l’image",
+										"dialog-label": "Images agrandies",
+										"close-label": "Fermer",
+										"previous-label": "Image précédente",
+										"next-label": "Image suivante",
+										"loading-label": "Chargement de l’image",
+										"error-label": "Impossible de charger l’image.",
+										"retry-label": "Réessayer",
+										"position-label": "{current} sur {total}"
+									},
+									"fr-CA": {
+										"open-label": "Agrandir la photo"
+									}
+								}
+							</script>
+							<img-enlarge
+								id="localized"
+								name="french"
+								open-label="Agrandir le paysage"
+								caption="Un sentier entre les montagnes."
+							>
+								<img
+									src="./mountains.svg"
+									width="800"
+									height="400"
+									alt="Un sentier entre deux montagnes vertes."
+								/>
+							</img-enlarge>
+							<img-enlarge
+								id="localized-detail"
+								name="french"
+								caption="Un vélo pour la promenade."
+							>
+								<img
+									src="./bicycle.svg"
+									width="640"
+									height="360"
+									alt="Un vélo rouge avec un panier."
+								/>
+							</img-enlarge>
+						</div>
 					</div>
-				</div>
+				</section>
 			</section>
 			<section class="demo-section" id="gallery-examples">
 				<h2>Galleries</h2>
+				<p>
+					A gallery lets you browse several images in one viewer. Use
+					one wrapper for a set of images, or connect separate
+					wrappers with a shared <code>name</code>.
+				</p>
 				<section id="unnamed-gallery-example">
 					<h3>Simple gallery</h3>
 					<p>
@@ -638,16 +675,26 @@
 								aria-label="A product image gallery code 10"
 								tabindex="0"
 							><code>&lt;div class="product-gallery"&gt;
-  <mark>&lt;img-enlarge name="city-bike" caption="The city bicycle."&gt;</mark>
+  <mark>&lt;img-enlarge name="city-bike"
+    caption="The city bicycle, ready for an afternoon ride."
+    open-label="Enlarge the city bicycle"&gt;</mark>
     &lt;a href="./bicycle.svg"&gt;
       &lt;img src="./bicycle.svg" alt="A red city bicycle with a basket."&gt;
     &lt;/a&gt;
   <mark>&lt;/img-enlarge&gt;</mark>
-  <mark>&lt;img-enlarge name="city-bike" caption="The front basket."&gt;</mark>
-    &lt;img src="./bicycle-basket.svg" alt="A woven basket above the front wheel."&gt;
+  <mark>&lt;img-enlarge name="city-bike"
+    caption="The front basket has room for a small bag."
+    open-label="Enlarge the front basket"&gt;</mark>
+    &lt;a href="./bicycle-basket.svg"&gt;
+      &lt;img src="./bicycle-basket.svg" alt="A woven basket above the front wheel."&gt;
+    &lt;/a&gt;
   <mark>&lt;/img-enlarge&gt;</mark>
-  <mark>&lt;img-enlarge name="city-bike" caption="The rear wheel."&gt;</mark>
-    &lt;img src="./bicycle-wheel.svg" alt="The bicycle’s rear wheel and frame."&gt;
+  <mark>&lt;img-enlarge name="city-bike"
+    caption="The rear wheel and red frame."
+    open-label="Enlarge the rear wheel"&gt;</mark>
+    &lt;a href="./bicycle-wheel.svg"&gt;
+      &lt;img src="./bicycle-wheel.svg" alt="The bicycle’s rear wheel and frame."&gt;
+    &lt;/a&gt;
   <mark>&lt;/img-enlarge&gt;</mark>
 &lt;/div&gt;</code></pre>
 						</micro-lighter>
@@ -708,11 +755,10 @@
 				<section id="javascript-controls-example">
 					<h3>HTML navigation buttons</h3>
 					<p>
-						The component normally uses CSS-generated navigation
-						buttons when they’re supported, with JavaScript-injected
-						HTML buttons as a fallback. Set
-						<code>controls="buttons"</code> to force the HTML
-						buttons in every browser.
+						Set <code>controls="buttons"</code> to use HTML
+						navigation buttons in every browser. Otherwise, the
+						component uses native CSS scroll buttons where supported
+						and HTML buttons elsewhere.
 					</p>
 					<div class="code-demo-pair">
 						<micro-lighter
@@ -722,7 +768,7 @@
 							data-label="HTML"
 						>
 							<pre
-								aria-label="Use JavaScript navigation buttons code 11"
+								aria-label="Use HTML navigation buttons code 11"
 								tabindex="0"
 							><code><mark>&lt;img-enlarge name="details" controls="buttons"&gt;</mark>
   &lt;img src="./bicycle.svg" alt="A red bicycle with a basket."&gt;
