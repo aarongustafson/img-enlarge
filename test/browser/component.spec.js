@@ -278,6 +278,98 @@ test('includes hidden label content through a shadow-tree slot ancestor', async 
 	).toHaveAccessibleName('Enlarge image: Mountain trail');
 });
 
+test('uses shadow content, assigned slots, and slot fallback text in referenced names', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const gallery = document.createElement('img-enlarge');
+		gallery.id = 'shadow-names';
+		gallery.setAttribute('force', '');
+		for (const [index, [shadow, light, hidden]] of [
+			['<span>Mountain trail</span>', 'Ignored light content', false],
+			[
+				'Mountain <slot>Ignored fallback</slot>',
+				'<span>trail</span><span hidden>Ignored</span>',
+				false,
+			],
+			['Mountain <slot>trail</slot>', '', false],
+			['Mountain <slot><span hidden>trail</span></slot>', '', true],
+		].entries()) {
+			const host = document.createElement('div');
+			host.id = `shadow-name-${index}`;
+			host.hidden = hidden;
+			host.innerHTML = light;
+			host.attachShadow({ mode: 'open' }).innerHTML = shadow;
+			gallery.append(host);
+			const image = document.createElement('img');
+			image.src = '/demo/mountains.svg';
+			image.alt = 'Ignored';
+			image.style.width = '160px';
+			image.setAttribute('aria-labelledby', host.id);
+			gallery.append(image);
+		}
+		document.body.append(gallery);
+	});
+	const gallery = page.locator('#shadow-names');
+	for (let index = 0; index < 4; index++) {
+		await expect(gallery.locator('img').nth(index)).toHaveAccessibleName(
+			'Mountain trail',
+		);
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName('Enlarge image: Mountain trail');
+	}
+});
+
+test('uses referenced button-input values before title fallbacks', async ({
+	page,
+}) => {
+	await serve(page);
+	await page.evaluate(() => {
+		const gallery = document.createElement('img-enlarge');
+		gallery.id = 'input-names';
+		gallery.setAttribute('force', '');
+		gallery.innerHTML = `
+			<input id="button-name" type="button" value="Mountains" title="Ignored">
+			<input id="submit-name" type="submit" value="Mountains" title="Ignored">
+			<input id="reset-name" type="reset" value="Mountains" title="Ignored">
+			<input id="empty-button-name" type="button" value="" title="Mountain trail">
+			<input id="aria-button-name" type="button" value="Ignored" aria-label="Mountain trail">
+		`;
+		for (const label of [
+			'button-name',
+			'submit-name',
+			'reset-name',
+			'empty-button-name',
+			'aria-button-name',
+		]) {
+			const image = document.createElement('img');
+			image.src = '/demo/mountains.svg';
+			image.alt = 'Ignored';
+			image.style.width = '160px';
+			image.setAttribute('aria-labelledby', label);
+			gallery.append(image);
+		}
+		document.body.append(gallery);
+	});
+	const gallery = page.locator('#input-names');
+	for (const [index, name] of [
+		'Mountains',
+		'Mountains',
+		'Mountains',
+		'Mountain trail',
+		'Mountain trail',
+	].entries()) {
+		await expect(gallery.locator('img').nth(index)).toHaveAccessibleName(
+			name,
+		);
+		await expect(
+			gallery.locator('.img-enlarge-trigger').nth(index),
+		).toHaveAccessibleName(`Enlarge image: ${name}`);
+	}
+});
+
 test('demo navigation preserves unclipped native focus', async ({ page }) => {
 	await serve(page);
 	await expectNativeFocus(page.locator('header a').first());

@@ -228,6 +228,12 @@ export class ImgEnlargeElement extends BaseElement {
 			return '';
 		const label = element.getAttribute('aria-label')?.trim();
 		if (label) return label;
+		if (
+			element.localName === 'input' &&
+			['button', 'submit', 'reset'].includes(element.type) &&
+			element.value.trim()
+		)
+			return element.value;
 		if (element.localName === 'br') return ' ';
 		if (element.localName === 'img')
 			return (
@@ -235,7 +241,12 @@ export class ImgEnlargeElement extends BaseElement {
 				element.getAttribute('title') ??
 				''
 			);
-		const text = [...element.childNodes]
+		let children = element.shadowRoot?.childNodes ?? element.childNodes;
+		if (element.localName === 'slot') {
+			const assigned = element.assignedNodes();
+			if (assigned.length) children = assigned;
+		}
+		const text = [...children]
 			.map((node) =>
 				node.nodeType === 3
 					? node.textContent
