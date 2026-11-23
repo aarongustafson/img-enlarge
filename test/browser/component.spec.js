@@ -223,7 +223,7 @@ test('organizes styles, attributes, labels, and the final galleries without dupl
 			'One-off image enlargement',
 			'Force enlargement',
 			'Alternate enlarged versions',
-			'Other attributes',
+			'Captions',
 			'Rewrite or translate the labels',
 			'Galleries',
 			'Styling',
