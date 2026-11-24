@@ -56,7 +56,8 @@ jobs:
               uses: actions/configure-pages@v6
 
             - name: Upload artifact
-              uses: actions/upload-pages-artifact@v5
+              # Keep the uploader compatible with deploy-pages@v5's artifact client.
+              uses: actions/upload-pages-artifact@v4
               with:
                   path: '_site'
 
